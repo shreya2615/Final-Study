@@ -298,14 +298,13 @@ function buildCandidateTrials(scenario, scenarioNumber) {
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
-  apiKey: "AIzaSyBJyjpK1xMQ-ecPUhutv3ulYNHwGY4yolg",
-  authDomain: "pilot-scenarios-study.firebaseapp.com",
-  databaseURL: "https://pilot-scenarios-study-default-rtdb.firebaseio.com",
-  projectId: "pilot-scenarios-study",
-  storageBucket: "pilot-scenarios-study.firebasestorage.app",
-  messagingSenderId: "163355880471",
-  appId: "1:163355880471:web:cf065b691f494e482f4052",
-  measurementId: "G-50KQJ9334C"
+  apiKey: "AIzaSyDVFN2B7ux0o--VEHY4ojHEdXWb864LBCk",
+  authDomain: "final-study-eb20c.firebaseapp.com",
+  projectId: "final-study-eb20c",
+  storageBucket: "final-study-eb20c.firebasestorage.app",
+  messagingSenderId: "1060756765989",
+  appId: "1:1060756765989:web:09fc13bb4f562abc236ecc",
+  measurementId: "G-8ZSSF48Q1F"
 };
 
 const app = firebase.initializeApp(firebaseConfig);

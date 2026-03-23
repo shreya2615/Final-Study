@@ -452,7 +452,6 @@ timeline.push({
         background:white;
       ">
         <p><b>Researchers:</b><br>
-        Eshnaa Aujla, graduate student (eshnaa15@yorku.ca)<br>
         Shreya Sharma, graduate student (ssharm29@york.ca)<br>
         Supervisor: Vinod Goel, vgoel@yorku.ca</p>
 
@@ -476,7 +475,7 @@ timeline.push({
 
         <p>Your data may be deposited in a publicly accessible scientific repository in fully anonymized form. No identifying information will be included.</p>
 
-        <p><b>Questions?</b> For questions about the study, contact Dr. Vinod Goel, Eshnaa Aujla, or Shreya Sharma. For questions about your rights, contact York University's Office of Research Ethics at ore@yorku.ca.</p>
+        <p><b>Questions?</b> For questions about the study, contact Dr. Vinod Goel or Shreya Sharma. For questions about your rights, contact York University's Office of Research Ethics at ore@yorku.ca.</p>
 
         <p><b>Legal Rights and Signatures:</b><br>
         By selecting “I consent to participate,” you indicate that you have read and understood the information above and agree to participate voluntarily.</p>
@@ -571,12 +570,12 @@ timeline.push({
       </p>
 
       <p>
-        <label for="demo_gender"><b>2. What is your gender?</b></label><br>
+        <label for="demo_gender"><b>2. What is your sex?</b></label><br>
         <select name="gender" id="demo_gender"
                 style="width:260px; padding:4px; margin-top:4px;">
           <option value="" disabled selected>-- Please select --</option>
-          <option value="Man">Man</option>
-          <option value="Woman">Woman</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
         </select>
       </p>
 

@@ -8,6 +8,9 @@
  * - No ECE scenarios
  * - Consent, demographics, instructions kept the same
  * - For each scenario, variants 1/2/3 are each used once
+ * - NEW: 6 total faces
+ *   * One CEO scenario gets face set [1,2,3] or [4,5,6]
+ *   * The other CEO scenario gets the unused set
  ****************************************************/
 
 /* global firebase, initJsPsych, jsPsychHtmlKeyboardResponse, jsPsychSurveyLikert, jsPsychInstructions, jsPsychPreload */
@@ -34,6 +37,10 @@ function shuffle(a) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+function sampleOne(a) {
+  return a[Math.floor(Math.random() * a.length)];
 }
 
 function ordinalWord(n) {
@@ -114,9 +121,30 @@ const BIOS = {
   ]
 };
 
-/* ---------- Helper: random candidate-to-face mapping ---------- */
-function assignIndicesToCandidates(candidates) {
-  const indices = shuffle([1, 2, 3]);
+/* ---------- NEW: CEO face-set assignment ---------- */
+/* One scenario gets [1,2,3], the other gets [4,5,6] */
+const firstCEOFaceSet = sampleOne([
+  [1, 2, 3],
+  [4, 5, 6]
+]);
+
+const secondCEOFaceSet =
+  JSON.stringify(firstCEOFaceSet) === JSON.stringify([1, 2, 3])
+    ? [4, 5, 6]
+    : [1, 2, 3];
+
+const CEO_FACE_SETS = {};
+if (sampleOne([true, false])) {
+  CEO_FACE_SETS['CEO_A'] = firstCEOFaceSet;
+  CEO_FACE_SETS['CEO_B'] = secondCEOFaceSet;
+} else {
+  CEO_FACE_SETS['CEO_A'] = secondCEOFaceSet;
+  CEO_FACE_SETS['CEO_B'] = firstCEOFaceSet;
+}
+
+/* ---------- Helper: random candidate-to-face mapping within allowed pool ---------- */
+function assignIndicesToCandidates(candidates, facePool) {
+  const indices = shuffle([...facePool]);
   const mapping = {};
   candidates.forEach((cand, i) => {
     mapping[cand.id] = indices[i];
@@ -129,7 +157,8 @@ function buildCandidateTrials(scenario, scenarioNumber) {
   let bios = BIOS[scenario.id].map(b => ({ ...b }));
   if (RANDOMIZE_DISPLAY_ORDER) bios = shuffle(bios);
 
-  const candToFace = assignIndicesToCandidates(bios);
+  const facePool = CEO_FACE_SETS[scenario.id];
+  const candToFace = assignIndicesToCandidates(bios, facePool);
   const variantPool = shuffle([1, 2, 3]);
 
   const trials = bios.map((cand, idxInScenario) => {
@@ -183,7 +212,8 @@ function buildCandidateTrials(scenario, scenarioNumber) {
         stimulus_file: img,
         modality: 'image',
         face_index: faceIndex,
-        variant_used: useVariant
+        variant_used: useVariant,
+        face_set: facePool.join(',')
       },
 
       on_finish: (data) => {
@@ -204,6 +234,7 @@ function buildCandidateTrials(scenario, scenarioNumber) {
           phase: 'bio_plus_face',
           candidate_id: cand.id,
           face_index: faceIndex,
+          face_set: facePool.join(','),
           variant: useVariant,
           rating,
           face_file: img,
@@ -346,6 +377,7 @@ const jsPsych = initJsPsych({
           phase: r.phase || '',
           candidate_id: r.candidate_id || '',
           face_index: (typeof r.face_index === 'undefined') ? '' : r.face_index,
+          face_set: r.face_set || '',
           variant: (typeof r.variant === 'undefined') ? '' : r.variant,
           rating: (typeof r.rating === 'undefined') ? null : r.rating,
           face_file: r.face_file || '',
@@ -683,8 +715,9 @@ const SCENARIO_ORDER = shuffle(CEO_SCENARIOS);
 
 /* ---------- Preload male face assets ---------- */
 const preloadImages = [];
-SCENARIO_ORDER.forEach(() => {
-  for (let i = 1; i <= 3; i++) {
+SCENARIO_ORDER.forEach((scn) => {
+  const facePool = CEO_FACE_SETS[scn.id];
+  for (const i of facePool) {
     for (let v = 1; v <= 3; v++) {
       preloadImages.push(facePath(i, v));
     }

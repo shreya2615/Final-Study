@@ -50,7 +50,7 @@ function sampleOne(a) {
 }
 
 function ordinalWord(n) {
-  return (['first', 'second', 'third', 'fourth'][n - 1]) || `${n}th`;
+  return (['First', 'Second', 'Third', 'Fourth'][n - 1]) || `${n}th`;
 }
 
 /* ---------- COMPACT CSS ---------- */
@@ -567,7 +567,6 @@ timeline.push({
         background:white;
       ">
         <p><b>Researchers:</b><br>
-        Eshnaa Aujla, graduate student (eshnaa15@yorku.ca)<br>
         Shreya Sharma, graduate student (ssharm29@york.ca)<br>
         Supervisor: Vinod Goel, vgoel@yorku.ca</p>
 
@@ -686,12 +685,12 @@ timeline.push({
       </p>
 
       <p>
-        <label for="demo_gender"><b>2. What is your gender?</b></label><br>
+        <label for="demo_gender"><b>2. What is your sex?</b></label><br>
         <select name="gender" id="demo_gender"
                 style="width:260px; padding:4px; margin-top:4px;">
           <option value="" disabled selected>-- Please select --</option>
-          <option value="Man">Man</option>
-          <option value="Woman">Woman</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
         </select>
       </p>
 
@@ -816,9 +815,9 @@ timeline.push({
     `<div style="text-align:center; max-width:900px; margin:48px auto;">
        <h3><b>Instructions</b></h3>
        <p>You will complete this study in <b>two parts</b>.</p>
-       <p><b>Part 1:</b> You will first review <b>both CEO scenarios</b> in text-only form. For each scenario, you will see the scenario and all three candidate bios on the same page and rate all three candidates.</p>
-       <p><b>Part 2:</b> You will then complete the image section. In this section, each scenario will be shown again and candidates will be presented one at a time with an image.</p>
-       <p>For all ratings, use the scale from <b>1</b> (not at all likely to recommend) to <b>7</b> (extremely likely to recommend).</p>
+       <p><b>Part 1:</b> You will first review <b>both CEO scenarios</b>. For each scenario, you will be presented with the scenario and all three candidate biographies on the same page and be required to rate all three candidates.</p>
+       <p><b>Part 2:</b> You will then complete the image section. In this section, each scenario will be shown again and candidates biographies will be presented one at a time with an image of them below it.</p>
+       <p>For all ratings, use the scale from <b>1</b> (not at all likely to recommend) to <b>7</b> (extremely likely to recommend) to indicate how likely you would be to reccomend each candidate for the position.</p>
        <p>Please press <b>NEXT</b> to proceed.</p>
      </div>`
   ],

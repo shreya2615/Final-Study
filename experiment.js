@@ -1,15 +1,16 @@
 /****************************************************
- * Pilot Scenarios Study - IMAGE ONLY CEO VERSION
+ * Pilot Scenarios Study - TWO-PART CEO IMAGE VERSION
  *
- * TWO-PART DESIGN:
  * PART 1:
+ * - Both CEO scenarios presented first
  * - Scenario + all 3 bios on one page
- * - 3 separate Likert ratings on same page
+ * - 3 Likert ratings on the same page
  *
  * PART 2:
- * - Same scenario shown again
- * - Then each candidate shown individually with image + bio
- * - 1 Likert rating per candidate page
+ * - Then the image section begins
+ * - Part 2 matches the original image experiment structure:
+ *   scenario announcement -> scenario preface -> candidate pages one at a time
+ * - 1-second fixation between candidates
  *
  * FACE LOGIC:
  * - 6 total male faces
@@ -20,9 +21,11 @@
 
 /* global firebase, initJsPsych, jsPsychHtmlKeyboardResponse, jsPsychSurveyLikert, jsPsychInstructions, jsPsychPreload */
 
+/* ---------- Participant ID ---------- */
 const urlParams = new URLSearchParams(window.location.search);
 const PARTICIPANT_ID = urlParams.get('PID') || `P${Math.floor(Math.random() * 1e9)}`;
 
+/* ---------- Config ---------- */
 const RANDOMIZE_DISPLAY_ORDER = true;
 const DELIM = "::";
 
@@ -47,10 +50,10 @@ function sampleOne(a) {
 }
 
 function ordinalWord(n) {
-  return (['first', 'second'][n - 1]) || `${n}th`;
+  return (['first', 'second', 'third', 'fourth'][n - 1]) || `${n}th`;
 }
 
-/* ---------- Compact CSS ---------- */
+/* ---------- COMPACT CSS ---------- */
 (function injectCompactCssOnce() {
   if (document.getElementById('compact-trial-css')) return;
 
@@ -61,15 +64,16 @@ function ordinalWord(n) {
     body.compact-trial .candidate-block h3 { margin: 0 0 6px 0 !important; line-height: 1.22; }
     body.compact-trial .candidate-block p { margin: 6px 0; line-height: 1.28; }
     body.compact-trial .candidate-block img { max-width: 240px; height: auto; margin: 4px 0; }
-    body.compact-trial .jspsych-survey-likert-question { margin: 8px 0 !important; }
+    body.compact-trial .jspsych-survey-likert-question { margin: 6px 0 !important; }
     body.compact-trial .jspsych-survey-likert-statement { margin-bottom: 6px !important; }
     body.compact-trial .jspsych-survey-likert-opts { margin: 4px 0 !important; }
-    body.compact-trial .jspsych-btn { margin-top: 8px !important; }
+    body.compact-trial .jspsych-btn { margin-top: 4px !important; }
 
-    body.text-part .jspsych-survey-likert-question { margin: 18px 0 !important; }
-    body.text-part .jspsych-survey-likert-statement { margin-bottom: 10px !important; }
-    body.text-part .jspsych-survey-likert-opts { margin-bottom: 8px !important; }
+    body.text-batch .jspsych-survey-likert-question { margin: 14px 0 !important; }
+    body.text-batch .jspsych-survey-likert-statement { margin-bottom: 8px !important; }
+    body.text-batch .jspsych-survey-likert-opts { margin: 6px 0 10px 0 !important; }
   `;
+
   const el = document.createElement('style');
   el.id = 'compact-trial-css';
   el.textContent = css;
@@ -147,7 +151,7 @@ if (sampleOne([true, false])) {
   CEO_FACE_SETS['CEO_B'] = firstCEOFaceSet;
 }
 
-/* ---------- Helper ---------- */
+/* ---------- Helpers ---------- */
 function assignIndicesToCandidates(candidates, facePool) {
   const indices = shuffle([...facePool]);
   const mapping = {};
@@ -157,14 +161,42 @@ function assignIndicesToCandidates(candidates, facePool) {
   return mapping;
 }
 
-/* ---------- PART 1: Scenario + all bios on one page ---------- */
-function buildPart1TextOnlyTrial(scenario, bios, scenarioNumber) {
+/* ---------- Scenario order + per-scenario setup ---------- */
+const SCENARIO_ORDER = shuffle(CEO_SCENARIOS);
+
+const SCENARIO_SETUP = {};
+SCENARIO_ORDER.forEach((scenario) => {
+  let bios = BIOS[scenario.id].map(b => ({ ...b }));
+  if (RANDOMIZE_DISPLAY_ORDER) bios = shuffle(bios);
+
+  const facePool = CEO_FACE_SETS[scenario.id];
+  const candToFace = assignIndicesToCandidates(bios, facePool);
+
+  const variantPool = shuffle([1, 2, 3]);
+  const variantMap = {};
+  bios.forEach((cand, i) => {
+    variantMap[cand.id] = variantPool[i];
+  });
+
+  SCENARIO_SETUP[scenario.id] = {
+    bios,
+    facePool,
+    candToFace,
+    variantMap
+  };
+});
+
+/* ---------- PART 1 builder ---------- */
+function buildPart1Trial(scenario, scenarioNumber) {
+  const setup = SCENARIO_SETUP[scenario.id];
+  const bios = setup.bios;
+
   const questions = bios.map((cand) => ({
     prompt: `
       <div style="text-align:left; max-width:900px; margin:0 auto;">
         <p style="margin:0 0 8px 0;"><b>${cand.name}</b></p>
-        <p style="margin:0 0 8px 0;">${cand.bio}</p>
-        <p style="margin:10px 0 6px 0;"><b>How likely would you be to recommend this candidate for the position?</b></p>
+        <p style="margin:0 0 10px 0;">${cand.bio}</p>
+        <p style="margin:0 0 6px 0;"><b>How likely would you be to recommend this candidate for the position?</b></p>
       </div>
     `,
     name: `${scenario.id}${DELIM}part1${DELIM}${cand.id}`,
@@ -172,128 +204,70 @@ function buildPart1TextOnlyTrial(scenario, bios, scenarioNumber) {
     required: true
   }));
 
-  return [
-    {
-      type: jsPsychHtmlKeyboardResponse,
-      stimulus: `
-        <div style="
-          height:100vh;
-          display:flex;
-          flex-direction:column;
-          justify-content:center;
-          align-items:center;
-          text-align:center;
-        ">
-          <p style="font-size:32px; margin:0 0 12px 0;">
-            <b>You will now be presented with the ${ordinalWord(scenarioNumber)} company scenario.</b>
-          </p>
-          <p style="font-size:22px; margin:0;">
-            Press <b>SPACE</b> to begin Part 1.
-          </p>
-        </div>
-      `,
-      choices: [' '],
-      data: {
-        trial_type: 'scenario_announce_part1',
-        scenario_id: scenario.id,
-        scenario_number: scenarioNumber,
-        study_part: 'part1_text_only'
-      }
-    },
-
-    {
-      type: jsPsychSurveyLikert,
-      preamble: `
-        <div style="text-align:center; max-width:950px; margin:0 auto 20px auto;">
-          <h3 style="margin:0 0 12px 0;"><b>${scenario.title}</b></h3>
-          <p style="margin:0 0 18px 0; line-height:1.5;">
-            ${scenario.text}
-          </p>
-          <p style="margin:0 0 20px 0;">
-            <b>Please rate each candidate below.</b>
-          </p>
-        </div>
-      `,
-      questions,
-      button_label: 'Continue',
-      on_start: () => {
-        document.body.classList.add('text-part');
-      },
-      on_finish: (data) => {
-        document.body.classList.remove('text-part');
-
-        const resp = (data.response && typeof data.response === 'object')
-          ? data.response
-          : (data.responses ? JSON.parse(data.responses) : {});
-
-        const rows = bios.map((cand) => {
-          const key = `${scenario.id}${DELIM}part1${DELIM}${cand.id}`;
-          const raw = resp[key];
-          const rating = (typeof raw === 'number') ? raw + 1 : null;
-
-          return {
-            participant_id: PARTICIPANT_ID,
-            scenario_id: scenario.id,
-            scenario_kind: 'CEO',
-            study_part: 'part1_text_only',
-            phase: 'scenario_plus_all_bios',
-            candidate_id: cand.id,
-            candidate_name: cand.name,
-            rating,
-            modality: 'text_only',
-            rt: data.rt
-          };
-        });
-
-        data.row_expanded = rows;
-      },
-      data: {
-        trial_type: 'part1_text_ratings',
-        scenario_id: scenario.id,
-        scenario_kind: 'CEO',
-        participant_id: PARTICIPANT_ID,
-        study_part: 'part1_text_only'
-      }
-    }
-  ];
-}
-
-/* ---------- PART 2: Image + bio one by one ---------- */
-function buildPart2ImageTrials(scenario, bios, scenarioNumber, candToFace, variantMap, facePool) {
-  const preface = {
-    type: jsPsychHtmlKeyboardResponse,
-    stimulus: `
-      <div style="
-        height:100vh;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        padding:0 24px;
-        box-sizing:border-box;
-      ">
-        <div style="max-width:900px; text-align:center;">
-          <h3 style="margin:0 0 16px 0; font-size:30px;"><b>${scenario.title}</b></h3>
-          <p style="margin:10px 0 24px 0; font-size:20px; line-height:1.5; color:rgba(0,0,0,0.85);">
-            ${scenario.text}
-          </p>
-          <p style="font-size:18px; margin-top:24px;">
-            You will now see the candidates again, this time <b>one at a time with an image</b>.
-          </p>
-          <p style="font-size:18px; margin-top:14px;">
-            Press <b>SPACE</b> to continue.
-          </p>
-        </div>
+  return {
+    type: jsPsychSurveyLikert,
+    preamble: `
+      <div style="text-align:center; max-width:950px; margin:0 auto 20px auto;">
+        <p style="font-size:26px; margin:0 0 10px 0;"><b>${ordinalWord(scenarioNumber)} company scenario</b></p>
+        <h3 style="margin:0 0 12px 0;"><b>${scenario.title}</b></h3>
+        <p style="margin:0 0 18px 0; line-height:1.5; color:rgba(0,0,0,0.85);">
+          ${scenario.text}
+        </p>
+        <p style="margin:0 0 20px 0;">
+          <b>Please rate all three candidates below.</b>
+        </p>
       </div>
     `,
-    choices: [' '],
+    questions,
+    button_label: 'Continue',
+    on_start: () => {
+      document.body.classList.add('text-batch');
+    },
+    on_finish: (data) => {
+      document.body.classList.remove('text-batch');
+
+      const resp = (data.response && typeof data.response === 'object')
+        ? data.response
+        : (data.responses ? JSON.parse(data.responses) : {});
+
+      const rows = bios.map((cand) => {
+        const key = `${scenario.id}${DELIM}part1${DELIM}${cand.id}`;
+        const raw = resp[key];
+        const rating = (typeof raw === 'number') ? raw + 1 : null;
+
+        return {
+          participant_id: PARTICIPANT_ID,
+          scenario_id: scenario.id,
+          scenario_kind: 'CEO',
+          study_part: 'part1_text_only',
+          phase: 'scenario_plus_all_bios',
+          candidate_id: cand.id,
+          candidate_name: cand.name,
+          rating,
+          modality: 'text_only',
+          rt: data.rt
+        };
+      });
+
+      data.row_expanded = rows;
+    },
     data: {
-      trial_type: 'preface_part2',
+      trial_type: 'part1_text_ratings',
       scenario_id: scenario.id,
       scenario_kind: 'CEO',
-      modality: 'image',
-      study_part: 'part2_image_bio'
+      participant_id: PARTICIPANT_ID,
+      study_part: 'part1_text_only'
     }
   };
+}
+
+/* ---------- PART 2 builder: matches original structure ---------- */
+function buildPart2CandidateTrials(scenario, scenarioNumber) {
+  const setup = SCENARIO_SETUP[scenario.id];
+  const bios = setup.bios;
+  const facePool = setup.facePool;
+  const candToFace = setup.candToFace;
+  const variantMap = setup.variantMap;
 
   const trials = bios.map((cand) => {
     const faceIndex = candToFace[cand.id];
@@ -315,8 +289,7 @@ function buildPart2ImageTrials(scenario, bios, scenarioNumber, candToFace, varia
         </p>
 
         <p style="margin:18px 0 10px 0;">
-          <b>How likely would you be to recommend this candidate for the position?</b>
-          (1 = Not at all likely, 7 = Extremely likely)
+          <b>How likely would you be to recommend this candidate?</b> (1 = Not at all likely, 7 = Extremely likely)
         </p>
       </div>
     `;
@@ -324,18 +297,18 @@ function buildPart2ImageTrials(scenario, bios, scenarioNumber, candToFace, varia
     return {
       type: jsPsychSurveyLikert,
       preamble: ``,
-      questions: [
-        {
-          prompt,
-          name: `${scenario.id}${DELIM}part2${DELIM}${cand.id}`,
-          labels: ["1", "2", "3", "4", "5", "6", "7"],
-          required: true
-        }
-      ],
+      questions: [{
+        prompt,
+        name: `${scenario.id}${DELIM}part2${DELIM}${cand.id}`,
+        labels: ["1", "2", "3", "4", "5", "6", "7"],
+        required: true
+      }],
       button_label: 'Continue',
+
       on_start: () => {
         document.body.classList.add('compact-trial');
       },
+
       data: {
         trial_type: 'bio_plus_face',
         scenario_id: scenario.id,
@@ -350,6 +323,7 @@ function buildPart2ImageTrials(scenario, bios, scenarioNumber, candToFace, varia
         face_set: facePool.join(','),
         study_part: 'part2_image_bio'
       },
+
       on_finish: (data) => {
         document.body.classList.remove('compact-trial');
 
@@ -359,6 +333,7 @@ function buildPart2ImageTrials(scenario, bios, scenarioNumber, candToFace, varia
 
         const key = Object.keys(resp)[0];
         const rating = Number(resp[key]) + 1;
+        const rt = data.rt;
 
         data.row_expanded = [{
           participant_id: PARTICIPANT_ID,
@@ -374,7 +349,7 @@ function buildPart2ImageTrials(scenario, bios, scenarioNumber, candToFace, varia
           rating,
           face_file: img,
           modality: 'image',
-          rt: data.rt
+          rt
         }];
       }
     };
@@ -402,27 +377,67 @@ function buildPart2ImageTrials(scenario, bios, scenarioNumber, candToFace, varia
     }
   });
 
-  return [preface, ...interleaved];
-}
+  const preface = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+      <div style="
+        height:100vh;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:0 24px;
+        box-sizing:border-box;
+      ">
+        <div style="max-width:900px; text-align:center;">
+          <h3 style="margin:0 0 16px 0; font-size:30px;"><b>${scenario.title}</b></h3>
+          <p style="margin:10px 0 24px 0; font-size:20px; line-height:1.5; color:rgba(0,0,0,0.85);">
+            ${scenario.text}
+          </p>
+          <p style="font-size:18px; margin-top:24px;">
+            Press <b>SPACE</b> to continue.
+          </p>
+        </div>
+      </div>
+    `,
+    choices: [' '],
+    data: {
+      trial_type: 'preface',
+      scenario_id: scenario.id,
+      scenario_kind: 'CEO',
+      modality: 'image',
+      study_part: 'part2_image_bio'
+    }
+  };
 
-/* ---------- Build full scenario block ---------- */
-function buildScenarioBlock(scenario, scenarioNumber) {
-  let bios = BIOS[scenario.id].map(b => ({ ...b }));
-  if (RANDOMIZE_DISPLAY_ORDER) bios = shuffle(bios);
+  const announce = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+      <div style="
+        height:100vh;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        align-items:center;
+        text-align:center;
+      ">
+        <p style="font-size:32px; margin:0 0 12px 0;">
+          <b>You will now be presented with the ${ordinalWord(scenarioNumber)} company scenario.</b>
+        </p>
+        <p style="font-size:22px; margin:0;">
+          Press <b>SPACE</b> to see the scenario.
+        </p>
+      </div>
+    `,
+    choices: [' '],
+    data: {
+      trial_type: 'scenario_announce',
+      scenario_id: scenario.id,
+      scenario_number: scenarioNumber,
+      study_part: 'part2_image_bio'
+    }
+  };
 
-  const facePool = CEO_FACE_SETS[scenario.id];
-  const candToFace = assignIndicesToCandidates(bios, facePool);
-
-  const variantPool = shuffle([1, 2, 3]);
-  const variantMap = {};
-  bios.forEach((cand, i) => {
-    variantMap[cand.id] = variantPool[i];
-  });
-
-  return [
-    ...buildPart1TextOnlyTrial(scenario, bios, scenarioNumber),
-    ...buildPart2ImageTrials(scenario, bios, scenarioNumber, candToFace, variantMap, facePool)
-  ];
+  return [announce, preface, ...interleaved];
 }
 
 /* ---------- Firebase ---------- */
@@ -456,7 +471,7 @@ const jsPsych = initJsPsych({
       }
     });
 
-    const participantRef = db.ref('pilot_scenarios_image_ceo_two_part').child(PARTICIPANT_ID);
+    const participantRef = db.ref('pilot_scenarios_image_ceo_two_part_blocked').child(PARTICIPANT_ID);
 
     function uploadAllRows() {
       if (flat.length === 0) {
@@ -491,6 +506,7 @@ const jsPsych = initJsPsych({
           rt: (typeof r.rt === 'undefined') ? null : r.rt,
           timestamp: new Date().toISOString()
         };
+
         return participantRef.push().set(payload);
       });
 
@@ -516,6 +532,7 @@ const jsPsych = initJsPsych({
             <p>Your responses could not be uploaded automatically, so they will download locally. If this has happened please email shreya.sharma2615@gmail.com.</p>
           </div>
         `;
+
         jsPsych.data.get().localSave('csv', 'backup_' + PARTICIPANT_ID + '.csv');
       });
   }
@@ -524,12 +541,13 @@ const jsPsych = initJsPsych({
 /* ---------- Timeline ---------- */
 const timeline = [];
 
-/* ---------- Consent ---------- */
+/* ---------- CONSENT PAGE ---------- */
 timeline.push({
   type: jsPsychHtmlKeyboardResponse,
   choices: "NO_KEYS",
   stimulus: `
     <div style="max-width:900px; margin:40px auto; font-size:16px;">
+
       <h2 style="text-align:center; margin-bottom:20px;"><b>Informed Consent</b></h2>
 
       <h3 style="text-align:center; margin-top:-10px; margin-bottom:8px;">
@@ -555,21 +573,25 @@ timeline.push({
 
         <p>We invite you to take part in this research study. Please read this document and discuss any questions or concerns that you may have with the Investigator.</p>
 
-        <p><b>Purpose of the Research:</b> This project investigates the cognitive structures and processes underlying human reasoning & problem-solving abilities. The tasks vary between conditions but all involve attending to visual stimuli and making judgments on a computer screen.</p>
+        <p><b>Purpose of the Research:</b> This project investigates the cognitive structures and processes underlying human reasoning & problem-solving abilities. The tasks vary between conditions but all involve attending to linguistic or visual stimuli and making a perceptual or cognitive judgment, usually on a computer screen.</p>
 
-        <p><b>What You Will Be Asked to Do:</b> You will complete a demographic questionnaire and then evaluate candidate profiles in two parts.</p>
+        <p><b>What You Will Be Asked to Do:</b> You will be asked to complete a self questionnaire. After viewing images, you will be asked to make certain judgements.</p>
 
-        <p><b>Risks and Discomforts:</b> We do not foresee any risks or discomfort from your participation in the research. If you do feel discomfort you may withdraw at any time.</p>
+        <p><b>Risks and Discomforts:</b> We do not foresee any risks or discomfort from your participation in the research. You may, however, experience some frustration or stress if you believe that you are not doing well. Certain participants may have difficulty with some of the tasks. If you do feel discomfort you may withdraw at any time.</p>
 
-        <p><b>Benefits:</b> There is no direct benefit to you, but knowledge may be gained that may help others in the future.</p>
+        <p><b>Benefits:</b> There is no direct benefit to you, but knowledge may be gained that may help others in the future. The study takes approximately 20 minutes to complete, and you will receive $5.00 USD for your participation.</p>
 
-        <p><b>Voluntary Participation:</b> Your participation is entirely voluntary and you may choose to stop participating at any time.</p>
+        <p><b>Voluntary Participation:</b> Your participation is entirely voluntary and you may choose to stop participating at any time. Your decision will not affect your relationship with the researcher, study staff, or York University.</p>
 
         <p><b>Withdrawal:</b> You may withdraw at any time. If you withdraw, all associated data will be destroyed immediately.</p>
 
-        <p><b>Confidentiality:</b> All data will be collected anonymously. Data will be stored in a secure online system accessible only to the research team.</p>
+        <p><b>Secondary Use of Data:</b> De-identified data may be used in later related studies by the research team, but only in anonymous form and only following ethics review.</p>
 
-        <p><b>Questions?</b> For questions about the study, contact Dr. Vinod Goel, Eshnaa Aujla, or Shreya Sharma.</p>
+        <p><b>Confidentiality:</b> All data will be collected anonymously. Data will be stored in a secure online system accessible only to the research team. Confidentiality cannot be guaranteed during internet transmission.</p>
+
+        <p>Your data may be deposited in a publicly accessible scientific repository in fully anonymized form. No identifying information will be included.</p>
+
+        <p><b>Questions?</b> For questions about the study, contact Dr. Vinod Goel, Eshnaa Aujla, or Shreya Sharma. For questions about your rights, contact York University's Office of Research Ethics at ore@yorku.ca.</p>
 
         <p><b>Legal Rights and Signatures:</b><br>
         By selecting “I consent to participate,” you indicate that you have read and understood the information above and agree to participate voluntarily.</p>
@@ -610,7 +632,7 @@ timeline.push({
     box.addEventListener("scroll", checkScroll);
 
     yesBtn.onclick = () => {
-      db.ref(`pilot_scenarios_image_ceo_two_part/${PARTICIPANT_ID}/consent`).set({
+      db.ref(`pilot_scenarios_image_ceo_two_part_blocked/${PARTICIPANT_ID}/consent`).set({
         consent: "yes",
         timestamp: new Date().toISOString()
       });
@@ -618,7 +640,7 @@ timeline.push({
     };
 
     noBtn.onclick = () => {
-      db.ref(`pilot_scenarios_image_ceo_two_part/${PARTICIPANT_ID}/consent`).set({
+      db.ref(`pilot_scenarios_image_ceo_two_part_blocked/${PARTICIPANT_ID}/consent`).set({
         consent: "no",
         timestamp: new Date().toISOString()
       });
@@ -639,11 +661,11 @@ timeline.push({
   stimulus: `
     <div style="text-align:center; max-width:900px; margin:48px auto;">
       <h2><b>Welcome to the experiment</b></h2>
-      <p>Imagine you are a recruiter at NorthStar Talent Collective. You are in charge of reviewing candidate profiles for CEO portfolios.</p>
-      <p>You will evaluate candidates for <b>two CEO hiring scenarios</b>.</p>
-      <p>In <b>Part 1</b>, you will read the scenario and all three candidate bios together and rate each candidate.</p>
-      <p>In <b>Part 2</b>, you will see the same scenario again and then evaluate the same candidates one at a time with an image.</p>
-      <p>You will first complete some demographic questions.</p>
+      <p>Imagine you are a recruiter at NorthStar Talent Collective. NorthStar helps in the identification and recruitment of employees ranging from CEOs to school teachers. You are in charge of reviewing candidate profiles for several different portfolios.</p>
+      <p>Two companies are looking to hire a new <b>Chief Executive Officer (CEO)</b>.</p>
+      <p>You will be presented with information about each company including the qualifications they are looking for in a new CEO, and the profiles of three candidates applying for each position.</p>
+      <p>Your job is to evaluate each candidate and indicate how likely you would be to recommend them for the position considering the companies’ requirements.</p>
+      <p>You will first be presented with some demographic questions.</p>
       <p>Press <b>SPACE</b> to begin the demographic questionnaire.</p>
     </div>
   `,
@@ -665,7 +687,8 @@ timeline.push({
 
       <p>
         <label for="demo_gender"><b>2. What is your gender?</b></label><br>
-        <select name="gender" id="demo_gender" style="width:260px; padding:4px; margin-top:4px;">
+        <select name="gender" id="demo_gender"
+                style="width:260px; padding:4px; margin-top:4px;">
           <option value="" disabled selected>-- Please select --</option>
           <option value="Man">Man</option>
           <option value="Woman">Woman</option>
@@ -674,7 +697,8 @@ timeline.push({
 
       <p>
         <label for="demo_ethnicity"><b>3. How would you describe your ethnicity?</b></label><br>
-        <select name="ethnicity" id="demo_ethnicity" style="width:320px; padding:4px; margin-top:4px;">
+        <select name="ethnicity" id="demo_ethnicity"
+                style="width:320px; padding:4px; margin-top:4px;">
           <option value="" disabled selected>-- Please select --</option>
           <option value="White">White</option>
           <option value="Black">Black</option>
@@ -692,7 +716,8 @@ timeline.push({
 
       <p>
         <label for="demo_employment"><b>4. What is your current employment status?</b></label><br>
-        <select name="employment" id="demo_employment" style="width:320px; padding:4px; margin-top:4px;">
+        <select name="employment" id="demo_employment"
+                style="width:320px; padding:4px; margin-top:4px;">
           <option value="" disabled selected>-- Please select --</option>
           <option value="Employed full-time">Employed full-time</option>
           <option value="Employed part-time">Employed part-time</option>
@@ -707,7 +732,8 @@ timeline.push({
 
       <p>
         <label for="demo_religion"><b>5. What is your current religious or spiritual affiliation?</b></label><br>
-        <select name="religion" id="demo_religion" style="width:320px; padding:4px; margin-top:4px;">
+        <select name="religion" id="demo_religion"
+                style="width:320px; padding:4px; margin-top:4px;">
           <option value="" disabled selected>-- Please select --</option>
           <option value="None / atheist / agnostic">None / atheist / agnostic</option>
           <option value="Christian">Christian</option>
@@ -723,7 +749,8 @@ timeline.push({
 
       <p>
         <label for="demo_edu"><b>6. What is your highest level of education completed?</b></label><br>
-        <select name="education" id="demo_edu" style="width:320px; padding:4px; margin-top:4px;">
+        <select name="education" id="demo_edu"
+                style="width:320px; padding:4px; margin-top:4px;">
           <option value="" disabled selected>-- Please select --</option>
           <option value="High school">High school</option>
           <option value="Some college/university">Some college/university</option>
@@ -788,24 +815,20 @@ timeline.push({
   pages: [
     `<div style="text-align:center; max-width:900px; margin:48px auto;">
        <h3><b>Instructions</b></h3>
-       <p>You will now be presented with <b>two CEO hiring scenarios</b>.</p>
-       <p>For each scenario, the study has <b>two parts</b>.</p>
-       <p><b>Part 1:</b> You will read the scenario and all three candidate bios on the same page and rate each candidate.</p>
-       <p><b>Part 2:</b> You will see the same scenario again and then evaluate the same candidates one at a time, each paired with an image.</p>
-       <p>For every rating, use the scale from <b>1</b> (not at all likely to recommend) to <b>7</b> (extremely likely to recommend).</p>
+       <p>You will complete this study in <b>two parts</b>.</p>
+       <p><b>Part 1:</b> You will first review <b>both CEO scenarios</b> in text-only form. For each scenario, you will see the scenario and all three candidate bios on the same page and rate all three candidates.</p>
+       <p><b>Part 2:</b> You will then complete the image section. In this section, each scenario will be shown again and candidates will be presented one at a time with an image.</p>
+       <p>For all ratings, use the scale from <b>1</b> (not at all likely to recommend) to <b>7</b> (extremely likely to recommend).</p>
        <p>Please press <b>NEXT</b> to proceed.</p>
      </div>`
   ],
   show_clickable_nav: true
 });
 
-/* ---------- Scenario order ---------- */
-const SCENARIO_ORDER = shuffle(CEO_SCENARIOS);
-
 /* ---------- Preload male face assets ---------- */
 const preloadImages = [];
 SCENARIO_ORDER.forEach((scn) => {
-  const facePool = CEO_FACE_SETS[scn.id];
+  const facePool = SCENARIO_SETUP[scn.id].facePool;
   for (const i of facePool) {
     for (let v = 1; v <= 3; v++) {
       preloadImages.push(facePath(i, v));
@@ -818,12 +841,45 @@ timeline.push({
   images: preloadImages
 });
 
-/* ---------- Build scenarios ---------- */
-SCENARIO_ORDER.forEach((scn, idx) => {
-  timeline.push(...buildScenarioBlock(scn, idx + 1));
+/* ---------- PART 1 intro ---------- */
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: `
+    <div style="text-align:center; max-width:900px; margin:48px auto;">
+      <h3><b>Part 1</b></h3>
+      <p>In this section, you will review both CEO scenarios in text-only form.</p>
+      <p>For each scenario, you will see the scenario and all three candidate bios on the same page.</p>
+      <p>Press <b>SPACE</b> to begin Part 1.</p>
+    </div>
+  `,
+  choices: [' ']
 });
 
-/* ---------- End ---------- */
+/* ---------- PART 1: both scenarios first ---------- */
+SCENARIO_ORDER.forEach((scn, idx) => {
+  timeline.push(buildPart1Trial(scn, idx + 1));
+});
+
+/* ---------- PART 2 intro ---------- */
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: `
+    <div style="text-align:center; max-width:900px; margin:48px auto;">
+      <h3><b>Part 2</b></h3>
+      <p>You will now begin the image section.</p>
+      <p>Each scenario will be shown again, and candidates will now be presented one at a time with an image.</p>
+      <p>Press <b>SPACE</b> to begin Part 2.</p>
+    </div>
+  `,
+  choices: [' ']
+});
+
+/* ---------- PART 2: original-style image section ---------- */
+SCENARIO_ORDER.forEach((scn, idx) => {
+  timeline.push(...buildPart2CandidateTrials(scn, idx + 1));
+});
+
+/* ---------- End screen ---------- */
 timeline.push({
   type: jsPsychHtmlKeyboardResponse,
   stimulus: `
@@ -835,4 +891,5 @@ timeline.push({
   choices: [' ']
 });
 
+/* ---------- Run ---------- */
 jsPsych.run(timeline);

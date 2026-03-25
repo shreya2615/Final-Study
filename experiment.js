@@ -27,7 +27,7 @@ const PARTICIPANT_ID = urlParams.get('PID') || `P${Math.floor(Math.random() * 1e
 /* ---------- Config ---------- */
 const RANDOMIZE_DISPLAY_ORDER = true;
 const DELIM = "::";
-const TARGET_PER_CONDITION = 30; // change this to your desired quota per condition
+const TARGET_PER_CONDITION = 30; // change this to your desired target per condition
 
 /* ---------- Paths ---------- */
 function facePath(faceIndex, variant) {
@@ -223,8 +223,6 @@ const db = firebase.database();
 /* ---------- Counterbalance state ---------- */
 let PARTICIPANT_CONDITION = null;
 let VARIANT_ASSIGNMENT = null;
-const preloadImages = [];
-const scenarioTrials = [];
 
 /* ---------- Firebase condition balancing ---------- */
 function assignConditionWithQuota() {
@@ -269,6 +267,19 @@ function assignConditionWithQuota() {
       false
     );
   });
+}
+
+/* ---------- Build preload images ---------- */
+function buildPreloadImages() {
+  const images = [];
+  CEO_SCENARIOS.forEach((scenario) => {
+    const bios = BIOS[scenario.id];
+    bios.forEach((cand) => {
+      images.push(facePath(cand.face_index, 1));
+      images.push(facePath(cand.face_index, 3));
+    });
+  });
+  return images;
 }
 
 /* ---------- Build candidate trials ---------- */
@@ -456,51 +467,15 @@ function buildCandidateTrials(scenario, scenarioNumber) {
   return [announce, preface, ...interleaved];
 }
 
-/* ---------- Setup trial ----------
-   Assigns condition via Firebase counter, saves it, then
-   builds preload list and scenario trials.
-*/
-const setupCounterbalance = {
-  type: jsPsychHtmlKeyboardResponse,
-  stimulus: `<p>Loading…</p>`,
-  choices: "NO_KEYS",
-  trial_duration: 10,
-  on_start: async () => {
-    PARTICIPANT_CONDITION = await assignConditionWithQuota();
-    VARIANT_ASSIGNMENT = CONDITION_PATTERNS[PARTICIPANT_CONDITION];
-
-    await db.ref(`participants/${PARTICIPANT_ID}/meta/condition_assignment`).set({
-      participant_id: PARTICIPANT_ID,
-      condition: PARTICIPANT_CONDITION,
-      timestamp: Date.now()
-    });
-
-    jsPsych.data.addProperties({
-      participant_id: PARTICIPANT_ID,
-      condition: PARTICIPANT_CONDITION
-    });
-
-    preloadImages.length = 0;
-    CEO_SCENARIOS.forEach((scenario) => {
-      const bios = BIOS[scenario.id];
-      bios.forEach((cand) => {
-        preloadImages.push(facePath(cand.face_index, 1));
-        preloadImages.push(facePath(cand.face_index, 3));
-      });
-    });
-
-    scenarioTrials.length = 0;
-    const shuffledScenarios = shuffle(CEO_SCENARIOS);
-    shuffledScenarios.forEach((scn, idx) => {
-      scenarioTrials.push(...buildCandidateTrials(scn, idx + 1));
-    });
-  }
-};
-
-const preloadStimuli = {
-  type: jsPsychPreload,
-  images: preloadImages
-};
+/* ---------- Build all scenario trials ---------- */
+function buildAllScenarioTrials() {
+  const scenarioOrder = shuffle(CEO_SCENARIOS);
+  const allTrials = [];
+  scenarioOrder.forEach((scn, idx) => {
+    allTrials.push(...buildCandidateTrials(scn, idx + 1));
+  });
+  return allTrials;
+}
 
 /* ---------- jsPsych Init ---------- */
 document.body.style.background = 'white';
@@ -587,305 +562,347 @@ const jsPsych = initJsPsych({
   }
 });
 
-/* ---------- Timeline ---------- */
-const timeline = [];
+/* ---------- Timeline builder ---------- */
+function buildTimeline(preloadImages, scenarioTrials) {
+  const timeline = [];
 
-/* ---------- Consent ---------- */
-timeline.push({
-  type: jsPsychHtmlKeyboardResponse,
-  choices: "NO_KEYS",
-  stimulus: `
-    <div style="max-width:900px; margin:40px auto; font-size:16px;">
+  /* ---------- Consent ---------- */
+  timeline.push({
+    type: jsPsychHtmlKeyboardResponse,
+    choices: "NO_KEYS",
+    stimulus: `
+      <div style="max-width:900px; margin:40px auto; font-size:16px;">
+        <h2 style="text-align:center; margin-bottom:20px;"><b>Informed Consent</b></h2>
 
-      <h2 style="text-align:center; margin-bottom:20px;"><b>Informed Consent</b></h2>
+        <h3 style="text-align:center; margin-top:-10px; margin-bottom:8px;">
+          Study Name: Cognitive Studies of Human Problem Solving and Reasoning
+        </h3>
 
-      <h3 style="text-align:center; margin-top:-10px; margin-bottom:8px;">
-        Study Name: Cognitive Studies of Human Problem Solving and Reasoning
-      </h3>
-
-      <p style="text-align:center; margin-top:0; margin-bottom:25px; font-size:15px; color:#444;">
-        Please scroll to the bottom of the document to enable the consent buttons.
-      </p>
-
-      <div id="consent_scrollbox" style="
-        border:1px solid #ccc;
-        padding:20px;
-        height:380px;
-        overflow-y:auto;
-        border-radius:6px;
-        background:white;
-      ">
-        <p><b>Researchers:</b><br>
-        Eshnaa Aujla, graduate student (eshnaa15@yorku.ca)<br>
-        Shreya Sharma, graduate student (ssharm29@york.ca)<br>
-        Supervisor: Vinod Goel, vgoel@yorku.ca</p>
-
-        <p>We invite you to take part in this research study. Please read this document and discuss any questions or concerns that you may have with the Investigator.</p>
-
-        <p><b>Purpose of the Research:</b> This project investigates the cognitive structures and processes underlying human reasoning & problem-solving abilities. The tasks vary between conditions but all involve attending to visual stimuli and making judgments on a computer screen.</p>
-
-        <p><b>What You Will Be Asked to Do:</b> You will complete a demographic questionnaire and then evaluate candidates for CEO positions.</p>
-
-        <p><b>Risks and Discomforts:</b> We do not foresee any risks or discomfort from your participation in the research. If you do feel discomfort you may withdraw at any time.</p>
-
-        <p><b>Benefits:</b> There is no direct benefit to you, but knowledge may be gained that may help others in the future.</p>
-
-        <p><b>Voluntary Participation:</b> Your participation is entirely voluntary and you may choose to stop participating at any time.</p>
-
-        <p><b>Withdrawal:</b> You may withdraw at any time. If you withdraw, all associated data will be destroyed immediately.</p>
-
-        <p><b>Confidentiality:</b> All data will be collected anonymously. Data will be stored in a secure online system accessible only to the research team.</p>
-
-        <p><b>Questions?</b> For questions about the study, contact Dr. Vinod Goel, Eshnaa Aujla, or Shreya Sharma.</p>
-
-        <p><b>Legal Rights and Signatures:</b><br>
-        By selecting “I consent to participate,” you indicate that you have read and understood the information above and agree to participate voluntarily.</p>
-      </div>
-
-      <div style="text-align:center; margin-top:25px;">
-        <button id="consent_yes" class="jspsych-btn" disabled style="opacity:0.5; margin-right:20px;">
-          I consent to participate
-        </button>
-
-        <button id="consent_no" class="jspsych-btn" disabled style="opacity:0.5; background:#ccc; color:black;">
-          I do NOT consent
-        </button>
-
-        <p id="scroll_notice" style="margin-top:10px; font-size:14px; color:#555;">
-          Please scroll to the bottom to enable the buttons.
+        <p style="text-align:center; margin-top:0; margin-bottom:25px; font-size:15px; color:#444;">
+          Please scroll to the bottom of the document to enable the consent buttons.
         </p>
-      </div>
-    </div>
-  `,
-  on_load: () => {
-    const yesBtn = document.getElementById("consent_yes");
-    const noBtn = document.getElementById("consent_no");
-    const notice = document.getElementById("scroll_notice");
-    const box = document.getElementById("consent_scrollbox");
 
-    function checkScroll() {
-      const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 5;
-      if (atBottom) {
-        yesBtn.disabled = false;
-        noBtn.disabled = false;
-        yesBtn.style.opacity = 1;
-        noBtn.style.opacity = 1;
-        notice.style.display = "none";
-      }
-    }
+        <div id="consent_scrollbox" style="
+          border:1px solid #ccc;
+          padding:20px;
+          height:380px;
+          overflow-y:auto;
+          border-radius:6px;
+          background:white;
+        ">
+          <p><b>Researchers:</b><br>
+          Eshnaa Aujla, graduate student (eshnaa15@yorku.ca)<br>
+          Shreya Sharma, graduate student (ssharm29@york.ca)<br>
+          Supervisor: Vinod Goel, vgoel@yorku.ca</p>
 
-    box.addEventListener("scroll", checkScroll);
+          <p>We invite you to take part in this research study. Please read this document and discuss any questions or concerns that you may have with the Investigator.</p>
 
-    yesBtn.onclick = () => {
-      db.ref(`pilot_scenarios_ceo_3scenario_v1v3/${PARTICIPANT_ID}/consent`).set({
-        consent: "yes",
-        timestamp: new Date().toISOString()
-      });
-      jsPsych.finishTrial({ consent: "yes" });
-    };
+          <p><b>Purpose of the Research:</b> This project investigates the cognitive structures and processes underlying human reasoning & problem-solving abilities. The tasks vary between conditions but all involve attending to visual stimuli and making judgments on a computer screen.</p>
 
-    noBtn.onclick = () => {
-      db.ref(`pilot_scenarios_ceo_3scenario_v1v3/${PARTICIPANT_ID}/consent`).set({
-        consent: "no",
-        timestamp: new Date().toISOString()
-      });
+          <p><b>What You Will Be Asked to Do:</b> You will complete a demographic questionnaire and then evaluate candidates for CEO positions.</p>
 
-      document.body.innerHTML = `
-        <div style="max-width:700px; margin:60px auto; text-align:center;">
-          <h2>You have chosen not to participate.</h2>
-          <p>No data has been collected.<br>You may now close this window.</p>
+          <p><b>Risks and Discomforts:</b> We do not foresee any risks or discomfort from your participation in the research. If you do feel discomfort you may withdraw at any time.</p>
+
+          <p><b>Benefits:</b> There is no direct benefit to you, but knowledge may be gained that may help others in the future.</p>
+
+          <p><b>Voluntary Participation:</b> Your participation is entirely voluntary and you may choose to stop participating at any time.</p>
+
+          <p><b>Withdrawal:</b> You may withdraw at any time. If you withdraw, all associated data will be destroyed immediately.</p>
+
+          <p><b>Confidentiality:</b> All data will be collected anonymously. Data will be stored in a secure online system accessible only to the research team.</p>
+
+          <p><b>Questions?</b> For questions about the study, contact Dr. Vinod Goel, Eshnaa Aujla, or Shreya Sharma.</p>
+
+          <p><b>Legal Rights and Signatures:</b><br>
+          By selecting “I consent to participate,” you indicate that you have read and understood the information above and agree to participate voluntarily.</p>
         </div>
-      `;
-    };
-  }
-});
 
-/* ---------- Welcome ---------- */
-timeline.push({
-  type: jsPsychHtmlKeyboardResponse,
-  stimulus: `
-    <div style="text-align:center; max-width:900px; margin:48px auto;">
-      <h2><b>Welcome to the experiment</b></h2>
-      <p>Imagine you are a recruiter at NorthStar Talent Collective. You will review candidates for <b>three CEO hiring scenarios</b>.</p>
-      <p>For each scenario, you will be shown three candidates one at a time. Each candidate profile will include an image and a written bio.</p>
-      <p>Your job is to evaluate how likely you would be to recommend each candidate for the position, based on the company’s requirements.</p>
-      <p>You will first be presented with some demographic questions.</p>
-      <p>Press <b>SPACE</b> to begin the demographic questionnaire.</p>
-    </div>
-  `,
-  choices: [' ']
-});
+        <div style="text-align:center; margin-top:25px;">
+          <button id="consent_yes" class="jspsych-btn" disabled style="opacity:0.5; margin-right:20px;">
+            I consent to participate
+          </button>
 
-/* ---------- Demographics ---------- */
-timeline.push({
-  type: jsPsychHtmlKeyboardResponse,
-  stimulus: `
-    <div style="max-width:700px; margin:48px auto; font-size:16px; text-align:left;">
-      <h3 style="text-align:center; margin-bottom:16px;">Demographic Questions</h3>
+          <button id="consent_no" class="jspsych-btn" disabled style="opacity:0.5; background:#ccc; color:black;">
+            I do NOT consent
+          </button>
 
-      <p>
-        <label for="demo_age"><b>1. What is your age?</b></label><br>
-        <input name="age" id="demo_age" type="number" min="18" max="99"
-               style="width:120px; padding:4px; margin-top:4px;">
-      </p>
-
-      <p>
-        <label for="demo_gender"><b>2. What is your gender?</b></label><br>
-        <select name="gender" id="demo_gender"
-                style="width:260px; padding:4px; margin-top:4px;">
-          <option value="" disabled selected>-- Please select --</option>
-          <option value="Man">Man</option>
-          <option value="Woman">Woman</option>
-        </select>
-      </p>
-
-      <p>
-        <label for="demo_ethnicity"><b>3. How would you describe your ethnicity?</b></label><br>
-        <select name="ethnicity" id="demo_ethnicity"
-                style="width:320px; padding:4px; margin-top:4px;">
-          <option value="" disabled selected>-- Please select --</option>
-          <option value="White">White</option>
-          <option value="Black">Black</option>
-          <option value="East Asian">East Asian</option>
-          <option value="South Asian">South Asian</option>
-          <option value="Southeast Asian">Southeast Asian</option>
-          <option value="Middle Eastern / North African">Middle Eastern / North African</option>
-          <option value="Indigenous">Indigenous</option>
-          <option value="Latinx">Latinx</option>
-          <option value="Mixed / Multiple">Mixed / Multiple</option>
-          <option value="Another ethnicity">Another ethnicity</option>
-          <option value="Prefer not to say">Prefer not to say</option>
-        </select>
-      </p>
-
-      <p>
-        <label for="demo_employment"><b>4. What is your current employment status?</b></label><br>
-        <select name="employment" id="demo_employment"
-                style="width:320px; padding:4px; margin-top:4px;">
-          <option value="" disabled selected>-- Please select --</option>
-          <option value="Employed full-time">Employed full-time</option>
-          <option value="Employed part-time">Employed part-time</option>
-          <option value="Self-employed">Self-employed</option>
-          <option value="Unemployed">Unemployed</option>
-          <option value="Student">Student</option>
-          <option value="Student and employed">Student and employed</option>
-          <option value="Other">Other</option>
-          <option value="Prefer not to say">Prefer not to say</option>
-        </select>
-      </p>
-
-      <p>
-        <label for="demo_religion"><b>5. What is your current religious or spiritual affiliation?</b></label><br>
-        <select name="religion" id="demo_religion"
-                style="width:320px; padding:4px; margin-top:4px;">
-          <option value="" disabled selected>-- Please select --</option>
-          <option value="None / atheist / agnostic">None / atheist / agnostic</option>
-          <option value="Christian">Christian</option>
-          <option value="Muslim">Muslim</option>
-          <option value="Jewish">Jewish</option>
-          <option value="Hindu">Hindu</option>
-          <option value="Buddhist">Buddhist</option>
-          <option value="Sikh">Sikh</option>
-          <option value="Another religion / spirituality">Another religion / spirituality</option>
-          <option value="Prefer not to say">Prefer not to say</option>
-        </select>
-      </p>
-
-      <p>
-        <label for="demo_edu"><b>6. What is your highest level of education completed?</b></label><br>
-        <select name="education" id="demo_edu"
-                style="width:320px; padding:4px; margin-top:4px;">
-          <option value="" disabled selected>-- Please select --</option>
-          <option value="High school">High school</option>
-          <option value="Some college/university">Some college/university</option>
-          <option value="Undergraduate degree">Undergraduate degree</option>
-          <option value="Graduate degree">Graduate degree</option>
-          <option value="Prefer not to say">Prefer not to say</option>
-        </select>
-      </p>
-
-      <div style="text-align:center; margin-top:24px;">
-        <button id="demo_continue" class="jspsych-btn">Continue</button>
+          <p id="scroll_notice" style="margin-top:10px; font-size:14px; color:#555;">
+            Please scroll to the bottom to enable the buttons.
+          </p>
+        </div>
       </div>
-    </div>
-  `,
-  choices: "NO_KEYS",
-  on_load: () => {
-    const btn = document.getElementById('demo_continue');
-    if (!btn) return;
+    `,
+    on_load: () => {
+      const yesBtn = document.getElementById("consent_yes");
+      const noBtn = document.getElementById("consent_no");
+      const notice = document.getElementById("scroll_notice");
+      const box = document.getElementById("consent_scrollbox");
 
-    btn.addEventListener('click', () => {
-      const age = String(document.getElementById('demo_age').value || '').trim();
-      const gender = document.getElementById('demo_gender').value;
-      const ethnicity = document.getElementById('demo_ethnicity').value;
-      const employment = document.getElementById('demo_employment').value;
-      const religion = document.getElementById('demo_religion').value;
-      const education = document.getElementById('demo_edu').value;
-
-      if (!age || !gender || !ethnicity || !employment || !religion || !education) {
-        alert("Please answer all questions before continuing.");
-        return;
+      function checkScroll() {
+        const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 5;
+        if (atBottom) {
+          yesBtn.disabled = false;
+          noBtn.disabled = false;
+          yesBtn.style.opacity = 1;
+          noBtn.style.opacity = 1;
+          notice.style.display = "none";
+        }
       }
 
-      const demoRow = {
-        participant_id: PARTICIPANT_ID,
-        phase: 'demographics',
-        age,
-        gender,
-        ethnicity,
-        employment,
-        religion,
-        education
+      box.addEventListener("scroll", checkScroll);
+
+      yesBtn.onclick = () => {
+        db.ref(`pilot_scenarios_ceo_3scenario_v1v3/${PARTICIPANT_ID}/consent`).set({
+          consent: "yes",
+          condition: PARTICIPANT_CONDITION,
+          timestamp: new Date().toISOString()
+        });
+        jsPsych.finishTrial({ consent: "yes" });
       };
 
-      jsPsych.finishTrial({
-        trial_type: 'demographics',
-        participant_id: PARTICIPANT_ID,
-        age,
-        gender,
-        ethnicity,
-        employment,
-        religion,
-        education,
-        row_expanded: [demoRow]
+      noBtn.onclick = () => {
+        db.ref(`pilot_scenarios_ceo_3scenario_v1v3/${PARTICIPANT_ID}/consent`).set({
+          consent: "no",
+          condition: PARTICIPANT_CONDITION,
+          timestamp: new Date().toISOString()
+        });
+
+        document.body.innerHTML = `
+          <div style="max-width:700px; margin:60px auto; text-align:center;">
+            <h2>You have chosen not to participate.</h2>
+            <p>No data has been collected.<br>You may now close this window.</p>
+          </div>
+        `;
+      };
+    }
+  });
+
+  /* ---------- Welcome ---------- */
+  timeline.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+      <div style="text-align:center; max-width:900px; margin:48px auto;">
+        <h2><b>Welcome to the experiment</b></h2>
+        <p>Imagine you are a recruiter at NorthStar Talent Collective. You will review candidates for <b>three CEO hiring scenarios</b>.</p>
+        <p>For each scenario, you will be shown three candidates one at a time. Each candidate profile will include an image and a written bio.</p>
+        <p>Your job is to evaluate how likely you would be to recommend each candidate for the position, based on the company’s requirements.</p>
+        <p>You will first be presented with some demographic questions.</p>
+        <p>Press <b>SPACE</b> to begin the demographic questionnaire.</p>
+      </div>
+    `,
+    choices: [' ']
+  });
+
+  /* ---------- Demographics ---------- */
+  timeline.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+      <div style="max-width:700px; margin:48px auto; font-size:16px; text-align:left;">
+        <h3 style="text-align:center; margin-bottom:16px;">Demographic Questions</h3>
+
+        <p>
+          <label for="demo_age"><b>1. What is your age?</b></label><br>
+          <input name="age" id="demo_age" type="number" min="18" max="99"
+                 style="width:120px; padding:4px; margin-top:4px;">
+        </p>
+
+        <p>
+          <label for="demo_gender"><b>2. What is your gender?</b></label><br>
+          <select name="gender" id="demo_gender"
+                  style="width:260px; padding:4px; margin-top:4px;">
+            <option value="" disabled selected>-- Please select --</option>
+            <option value="Man">Man</option>
+            <option value="Woman">Woman</option>
+          </select>
+        </p>
+
+        <p>
+          <label for="demo_ethnicity"><b>3. How would you describe your ethnicity?</b></label><br>
+          <select name="ethnicity" id="demo_ethnicity"
+                  style="width:320px; padding:4px; margin-top:4px;">
+            <option value="" disabled selected>-- Please select --</option>
+            <option value="White">White</option>
+            <option value="Black">Black</option>
+            <option value="East Asian">East Asian</option>
+            <option value="South Asian">South Asian</option>
+            <option value="Southeast Asian">Southeast Asian</option>
+            <option value="Middle Eastern / North African">Middle Eastern / North African</option>
+            <option value="Indigenous">Indigenous</option>
+            <option value="Latinx">Latinx</option>
+            <option value="Mixed / Multiple">Mixed / Multiple</option>
+            <option value="Another ethnicity">Another ethnicity</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+          </select>
+        </p>
+
+        <p>
+          <label for="demo_employment"><b>4. What is your current employment status?</b></label><br>
+          <select name="employment" id="demo_employment"
+                  style="width:320px; padding:4px; margin-top:4px;">
+            <option value="" disabled selected>-- Please select --</option>
+            <option value="Employed full-time">Employed full-time</option>
+            <option value="Employed part-time">Employed part-time</option>
+            <option value="Self-employed">Self-employed</option>
+            <option value="Unemployed">Unemployed</option>
+            <option value="Student">Student</option>
+            <option value="Student and employed">Student and employed</option>
+            <option value="Other">Other</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+          </select>
+        </p>
+
+        <p>
+          <label for="demo_religion"><b>5. What is your current religious or spiritual affiliation?</b></label><br>
+          <select name="religion" id="demo_religion"
+                  style="width:320px; padding:4px; margin-top:4px;">
+            <option value="" disabled selected>-- Please select --</option>
+            <option value="None / atheist / agnostic">None / atheist / agnostic</option>
+            <option value="Christian">Christian</option>
+            <option value="Muslim">Muslim</option>
+            <option value="Jewish">Jewish</option>
+            <option value="Hindu">Hindu</option>
+            <option value="Buddhist">Buddhist</option>
+            <option value="Sikh">Sikh</option>
+            <option value="Another religion / spirituality">Another religion / spirituality</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+          </select>
+        </p>
+
+        <p>
+          <label for="demo_edu"><b>6. What is your highest level of education completed?</b></label><br>
+          <select name="education" id="demo_edu"
+                  style="width:320px; padding:4px; margin-top:4px;">
+            <option value="" disabled selected>-- Please select --</option>
+            <option value="High school">High school</option>
+            <option value="Some college/university">Some college/university</option>
+            <option value="Undergraduate degree">Undergraduate degree</option>
+            <option value="Graduate degree">Graduate degree</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+          </select>
+        </p>
+
+        <div style="text-align:center; margin-top:24px;">
+          <button id="demo_continue" class="jspsych-btn">Continue</button>
+        </div>
+      </div>
+    `,
+    choices: "NO_KEYS",
+    on_load: () => {
+      const btn = document.getElementById('demo_continue');
+      if (!btn) return;
+
+      btn.addEventListener('click', () => {
+        const age = String(document.getElementById('demo_age').value || '').trim();
+        const gender = document.getElementById('demo_gender').value;
+        const ethnicity = document.getElementById('demo_ethnicity').value;
+        const employment = document.getElementById('demo_employment').value;
+        const religion = document.getElementById('demo_religion').value;
+        const education = document.getElementById('demo_edu').value;
+
+        if (!age || !gender || !ethnicity || !employment || !religion || !education) {
+          alert("Please answer all questions before continuing.");
+          return;
+        }
+
+        const demoRow = {
+          participant_id: PARTICIPANT_ID,
+          condition: PARTICIPANT_CONDITION,
+          phase: 'demographics',
+          age,
+          gender,
+          ethnicity,
+          employment,
+          religion,
+          education
+        };
+
+        jsPsych.finishTrial({
+          trial_type: 'demographics',
+          participant_id: PARTICIPANT_ID,
+          condition: PARTICIPANT_CONDITION,
+          age,
+          gender,
+          ethnicity,
+          employment,
+          religion,
+          education,
+          row_expanded: [demoRow]
+        });
       });
+    }
+  });
+
+  /* ---------- Instructions ---------- */
+  timeline.push({
+    type: jsPsychInstructions,
+    pages: [
+      `<div style="text-align:center; max-width:900px; margin:48px auto;">
+         <h3><b>Instructions</b></h3>
+         <p>You will now be presented with <b>three different CEO hiring scenarios</b>.</p>
+         <p>For each scenario, you will review <b>three candidates</b> one at a time.</p>
+         <p>Each candidate will be shown with an <b>image</b> and a written bio.</p>
+         <p>Your task is to rate how likely you would be to recommend each candidate for the position.</p>
+         <p>Use the scale from <b>1</b> (not at all likely to recommend) to <b>7</b> (extremely likely to recommend).</p>
+         <p>Please press <b>NEXT</b> to proceed.</p>
+       </div>`
+    ],
+    show_clickable_nav: true
+  });
+
+  /* ---------- Preload ---------- */
+  timeline.push({
+    type: jsPsychPreload,
+    images: preloadImages
+  });
+
+  /* ---------- Scenario trials ---------- */
+  timeline.push(...scenarioTrials);
+
+  /* ---------- End ---------- */
+  timeline.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+      <div style="text-align:center; max-width:900px; margin:48px auto;">
+        <h3>Thank you!</h3>
+        <p>Press <b>SPACE</b> to finish.</p>
+      </div>
+    `,
+    choices: [' ']
+  });
+
+  return timeline;
+}
+
+/* ---------- Start experiment only after condition is assigned ---------- */
+(async function startExperiment() {
+  try {
+    PARTICIPANT_CONDITION = await assignConditionWithQuota();
+    VARIANT_ASSIGNMENT = CONDITION_PATTERNS[PARTICIPANT_CONDITION];
+
+    await db.ref(`participants/${PARTICIPANT_ID}/meta/condition_assignment`).set({
+      participant_id: PARTICIPANT_ID,
+      condition: PARTICIPANT_CONDITION,
+      timestamp: Date.now()
     });
+
+    jsPsych.data.addProperties({
+      participant_id: PARTICIPANT_ID,
+      condition: PARTICIPANT_CONDITION
+    });
+
+    const preloadImages = buildPreloadImages();
+    const scenarioTrials = buildAllScenarioTrials();
+    const timeline = buildTimeline(preloadImages, scenarioTrials);
+
+    jsPsych.run(timeline);
+  } catch (err) {
+    console.error("Startup failed:", err);
+    document.body.innerHTML = `
+      <div style="text-align:center; max-width:900px; margin:48px auto;">
+        <h2>The experiment could not start.</h2>
+        <p>Please refresh the page or contact the researcher.</p>
+        <p style="font-family:monospace; color:#666;">${String(err && err.message ? err.message : err)}</p>
+      </div>
+    `;
   }
-});
-
-/* ---------- Instructions ---------- */
-timeline.push({
-  type: jsPsychInstructions,
-  pages: [
-    `<div style="text-align:center; max-width:900px; margin:48px auto;">
-       <h3><b>Instructions</b></h3>
-       <p>You will now be presented with <b>three different CEO hiring scenarios</b>.</p>
-       <p>For each scenario, you will review <b>three candidates</b> one at a time.</p>
-       <p>Each candidate will be shown with an <b>image</b> and a written bio.</p>
-       <p>Your task is to rate how likely you would be to recommend each candidate for the position.</p>
-       <p>Use the scale from <b>1</b> (not at all likely to recommend) to <b>7</b> (extremely likely to recommend).</p>
-       <p>Please press <b>NEXT</b> to proceed.</p>
-     </div>`
-  ],
-  show_clickable_nav: true
-});
-
-/* ---------- Dynamic setup ---------- */
-timeline.push(setupCounterbalance);
-timeline.push(preloadStimuli);
-timeline.push({ timeline: scenarioTrials });
-
-/* ---------- End ---------- */
-timeline.push({
-  type: jsPsychHtmlKeyboardResponse,
-  stimulus: `
-    <div style="text-align:center; max-width:900px; margin:48px auto;">
-      <h3>Thank you!</h3>
-      <p>Press <b>SPACE</b> to finish.</p>
-    </div>
-  `,
-  choices: [' ']
-});
-
-/* ---------- Run ---------- */
-jsPsych.run(timeline);
+})();

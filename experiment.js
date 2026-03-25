@@ -1,22 +1,21 @@
 /****************************************************
- * Pilot Scenarios Study - TWO-PART CEO IMAGE VERSION
+ * Pilot Scenarios Study - CEO IMAGE ONLY
  *
- * PART 1:
- * - Both CEO scenarios presented first
- * - Scenario + all 3 bios on one page
- * - 3 Likert ratings on the same page
+ * DESIGN:
+ * - Only image-based candidate pages
+ * - 3 CEO scenarios
+ * - 3 candidates per scenario
+ * - 9 total male faces, 1 face identity per candidate
+ * - Only variants 1 and 3 used
+ * - Participants assigned to 1 of 6 fixed conditions
+ * - Firebase transaction keeps condition counts as even as possible
+ * - Scenario order randomized
+ * - Candidate order within scenario randomized
  *
- * PART 2:
- * - Then the image section begins
- * - Part 2 matches the original image experiment structure:
- *   scenario announcement -> scenario preface -> candidate pages one at a time
- * - 1-second fixation between candidates
- *
- * FACE LOGIC:
- * - 6 total male faces
- * - One CEO scenario gets faces [1,2,3]
- * - The other CEO scenario gets faces [4,5,6]
- * - Within each scenario, variants 1,2,3 are each used once
+ * VARIANT COUNTERBALANCING:
+ * - C1 = rational choice
+ * - C2 = second-best choice
+ * - C3 = worst choice
  ****************************************************/
 
 /* global firebase, initJsPsych, jsPsychHtmlKeyboardResponse, jsPsychSurveyLikert, jsPsychInstructions, jsPsychPreload */
@@ -28,6 +27,7 @@ const PARTICIPANT_ID = urlParams.get('PID') || `P${Math.floor(Math.random() * 1e
 /* ---------- Config ---------- */
 const RANDOMIZE_DISPLAY_ORDER = true;
 const DELIM = "::";
+const TARGET_PER_CONDITION = 30; // change this to your desired quota per condition
 
 /* ---------- Paths ---------- */
 function facePath(faceIndex, variant) {
@@ -43,10 +43,6 @@ function shuffle(a) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
-}
-
-function sampleOne(a) {
-  return a[Math.floor(Math.random() * a.length)];
 }
 
 function ordinalWord(n) {
@@ -68,10 +64,6 @@ function ordinalWord(n) {
     body.compact-trial .jspsych-survey-likert-statement { margin-bottom: 6px !important; }
     body.compact-trial .jspsych-survey-likert-opts { margin: 4px 0 !important; }
     body.compact-trial .jspsych-btn { margin-top: 4px !important; }
-
-    body.text-batch .jspsych-survey-likert-question { margin: 14px 0 !important; }
-    body.text-batch .jspsych-survey-likert-statement { margin-bottom: 8px !important; }
-    body.text-batch .jspsych-survey-likert-opts { margin: 6px 0 10px 0 !important; }
   `;
 
   const el = document.createElement('style');
@@ -91,188 +83,212 @@ const CEO_SCENARIOS = [
     id: 'CEO_B',
     title: 'GreenPath',
     text: `GreenPath develops software to help other companies track and reduce their environmental impact in Canada and Europe. We’ve grown quickly to a team of 500, but that growth has created new pressures. We’ve fallen behind in updating our tools and platforms to keep up with new climate regulations, particularly in Europe. Furthermore, our switch back from remote to in-office mode after the COVID lockdowns has left some staff dissatisfied and unheard. We now want to consolidate and focus on doing two things better: staying ahead of environmental standards and making GreenPath a more connected and desirable place to work. We are looking for a new CEO to help us achieve these goals.`
+  },
+  {
+    id: 'CEO_C',
+    title: 'Westline Foods',
+    text: `Westline Foods is a Canadian company that produces packaged meal products for major grocery chains across North America. In recent years, the company has developed a strong reputation for quality and steady growth. More recently, however, two issues have begun to threaten that momentum. Product launches have been moving more slowly than expected, making it harder for the company to respond to changing consumer demand. At the same time, employee turnover across several divisions has made it difficult to maintain continuity within the organization. We are looking for a new CEO who can help the company move more efficiently while also creating a more stable internal environment.`
   }
 ];
 
+/*
+  C1 = rational choice
+  C2 = second-best choice
+  C3 = worst choice
+*/
 const BIOS = {
   CEO_A: [
     {
       id: 'C1',
       name: 'Richard',
+      status: 'rational',
+      face_index: 1,
       bio: 'In my last role, I oversaw expansion of the company into Germany and the Netherlands. I speak German and have a network of contacts in both countries. Shortly after initiating the expansion, we were confronted by an aggressive takeover attempt. I worked directly with the board and our lawyers, investors, and regulators to fend off the aggression and safeguard shareholder value, while also keeping focus on our long-term corporate goals. I keep people calm and grounded when things heat up.'
     },
     {
       id: 'C2',
       name: 'Scott',
+      status: 'second_best',
+      face_index: 2,
       bio: 'I have successfully led the launch of software technology products in Europe as the vice president of a multinational company. I also helped set up our first offices and client networks in both Germany and Spain. I am fully conversant in German and French, and I know how to effectively navigate cultural and regulatory differences in various contexts. I’m excited about helping companies grow across borders and I like being the person who connects the dots between people and markets.'
     },
     {
       id: 'C3',
       name: 'John',
+      status: 'worst',
+      face_index: 3,
       bio: 'I have successfully led corporate organizations through intense and challenging internal changes, including board turnover and investor turmoil, while helping the company maintain steady focus and consistently grow profits over time. I have also worked very closely with legal teams on contract disputes, negotiations, and restructuring plans. What I bring to the table is the ability to keep a company calm, collected, and focused while things shift around them.'
     }
   ],
+
   CEO_B: [
     {
       id: 'C1',
       name: 'Thomas',
+      status: 'rational',
+      face_index: 4,
       bio: 'As vice president of a multinational green tech company, I led system updates in Germany and France to help clients comply with new EU climate regulations. Around the same time, COVID restrictions forced a shift to remote work, which caused isolation, low morale, and a loss of shared purpose. I implemented several initiatives to address these challenges, resulting in a 67% increase in retention and a 73% boost in job satisfaction over the next three years. To me, leadership means being steady, compassionate, empathetic, and mission-focused. I still bike to work and strive to live by the values we promote.'
     },
     {
       id: 'C2',
       name: 'James',
+      status: 'second_best',
+      face_index: 5,
       bio: 'I was appointed VP head of human resources while my current company was struggling with low morale and employee retention. My approach was to empathize and view the situation from the employee’s perspective. I initiated steps to make the employees feel heard at every level. This led to the opening of corporate daycare facilities and encouraging flexible hours. We also initiated regular company retreats to reinforce team cohesion. After three years our employee retention rate is 95% and corporate morale at an all-time high. I believe engaged, motivated employees are essential to long-term success and overall profitability.'
     },
     {
       id: 'C3',
       name: 'Brian',
+      status: 'worst',
+      face_index: 6,
       bio: 'I have held leadership positions at the vice president level in both marketing and finance across several well-established multinational corporations. In my marketing role, we successfully increased U.S. market share by 12% over a two-year period under my direct leadership. In the finance position, I implemented strategic measures to reduce company debt and boost shareholder equity, which ultimately resulted in a 54% increase in our stock value. I consider myself a well-rounded, seasoned corporate executive with a strong track record of results who can position your organization for sustained growth and long-term profitability.'
+    }
+  ],
+
+  CEO_C: [
+    {
+      id: 'C1',
+      name: 'Robert',
+      status: 'rational',
+      face_index: 7,
+      bio: 'In my previous role as president of a national consumer goods company, I was brought in during a period when new product lines were taking too long to reach market and several departments were struggling to hold onto experienced staff. Over time, I worked with senior teams to tighten coordination across development and operations, while also putting more attention on how managers supported and retained employees. Colleagues often described me as someone who could bring greater rhythm to the organization without losing sight of the people doing the work. I have usually been drawn to companies that need steadier execution and a stronger internal foundation.'
+    },
+    {
+      id: 'C2',
+      name: 'Mark',
+      status: 'second_best',
+      face_index: 8,
+      bio: 'As vice president of operations at a large food manufacturing firm, I spent much of my time improving how quickly products moved from planning to launch. My work often involved coordinating across production, supply chain, and commercial teams so that decisions were made more efficiently and fewer delays carried over from one stage to the next. I’ve generally done my best work in environments where companies want to become more responsive and better organized as they grow. People I’ve worked with tend to know me as calm, methodical, and focused on keeping large initiatives moving forward.'
+    },
+    {
+      id: 'C3',
+      name: 'Jason',
+      status: 'worst',
+      face_index: 9,
+      bio: 'I have held senior leadership roles in corporate finance and strategic planning for several established Canadian firms. In one position, I helped oversee a multi-year budgeting process that improved cost visibility across business units. In another, I worked with executive leadership to refine long-term forecasting and investor reporting practices. I see myself as a disciplined and analytical leader who values structure, accountability, and sound decision-making. My career has largely centered on helping companies better understand their financial position and plan for sustainable long-term performance.'
     }
   ]
 };
 
-/* ---------- CEO face-set assignment ---------- */
-const firstCEOFaceSet = sampleOne([
-  [1, 2, 3],
-  [4, 5, 6]
-]);
+/* ---------- Counterbalancing conditions ----------
+   Each triple is [C1, C2, C3] variants for that scenario.
+*/
+const CONDITION_PATTERNS = {
+  1: {
+    CEO_A: [1, 1, 3],
+    CEO_B: [3, 3, 1],
+    CEO_C: [1, 3, 1]
+  },
+  2: {
+    CEO_A: [1, 3, 1],
+    CEO_B: [3, 1, 3],
+    CEO_C: [3, 1, 1]
+  },
+  3: {
+    CEO_A: [3, 1, 1],
+    CEO_B: [1, 3, 3],
+    CEO_C: [1, 1, 3]
+  },
+  4: {
+    CEO_A: [3, 3, 1],
+    CEO_B: [1, 1, 3],
+    CEO_C: [3, 1, 3]
+  },
+  5: {
+    CEO_A: [3, 1, 3],
+    CEO_B: [1, 3, 1],
+    CEO_C: [1, 3, 3]
+  },
+  6: {
+    CEO_A: [1, 3, 3],
+    CEO_B: [3, 1, 1],
+    CEO_C: [3, 3, 1]
+  }
+};
 
-const secondCEOFaceSet =
-  JSON.stringify(firstCEOFaceSet) === JSON.stringify([1, 2, 3])
-    ? [4, 5, 6]
-    : [1, 2, 3];
+/* ---------- Firebase ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyDVFN2B7ux0o--VEHY4ojHEdXWb864LBCk",
+  authDomain: "final-study-eb20c.firebaseapp.com",
+  projectId: "final-study-eb20c",
+  storageBucket: "final-study-eb20c.firebasestorage.app",
+  messagingSenderId: "1060756765989",
+  appId: "1:1060756765989:web:09fc13bb4f562abc236ecc",
+  measurementId: "G-8ZSSF48Q1F"
+};
 
-const CEO_FACE_SETS = {};
-if (sampleOne([true, false])) {
-  CEO_FACE_SETS['CEO_A'] = firstCEOFaceSet;
-  CEO_FACE_SETS['CEO_B'] = secondCEOFaceSet;
-} else {
-  CEO_FACE_SETS['CEO_A'] = secondCEOFaceSet;
-  CEO_FACE_SETS['CEO_B'] = firstCEOFaceSet;
-}
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-/* ---------- Helpers ---------- */
-function assignIndicesToCandidates(candidates, facePool) {
-  const indices = shuffle([...facePool]);
-  const mapping = {};
-  candidates.forEach((cand, i) => {
-    mapping[cand.id] = indices[i];
-  });
-  return mapping;
-}
+/* ---------- Counterbalance state ---------- */
+let PARTICIPANT_CONDITION = null;
+let VARIANT_ASSIGNMENT = null;
+const preloadImages = [];
+const scenarioTrials = [];
 
-/* ---------- Scenario order + per-scenario setup ---------- */
-const SCENARIO_ORDER = shuffle(CEO_SCENARIOS);
+/* ---------- Firebase condition balancing ---------- */
+function assignConditionWithQuota() {
+  const countsRef = db.ref("meta/condition_counts_ceo_v1v3");
 
-const SCENARIO_SETUP = {};
-SCENARIO_ORDER.forEach((scenario) => {
-  let bios = BIOS[scenario.id].map(b => ({ ...b }));
-  if (RANDOMIZE_DISPLAY_ORDER) bios = shuffle(bios);
+  return new Promise((resolve, reject) => {
+    let chosen = 1;
 
-  const facePool = CEO_FACE_SETS[scenario.id];
-  const candToFace = assignIndicesToCandidates(bios, facePool);
-
-  const variantPool = shuffle([1, 2, 3]);
-  const variantMap = {};
-  bios.forEach((cand, i) => {
-    variantMap[cand.id] = variantPool[i];
-  });
-
-  SCENARIO_SETUP[scenario.id] = {
-    bios,
-    facePool,
-    candToFace,
-    variantMap
-  };
-});
-
-/* ---------- PART 1 builder ---------- */
-function buildPart1Trial(scenario, scenarioNumber) {
-  const setup = SCENARIO_SETUP[scenario.id];
-  const bios = setup.bios;
-
-  const questions = bios.map((cand) => ({
-    prompt: `
-      <div style="text-align:left; max-width:900px; margin:0 auto;">
-        <p style="margin:0 0 8px 0;"><b>${cand.name}</b></p>
-        <p style="margin:0 0 10px 0;">${cand.bio}</p>
-        <p style="margin:0 0 6px 0;"><b>How likely would you be to recommend this candidate for the position?</b></p>
-      </div>
-    `,
-    name: `${scenario.id}${DELIM}part1${DELIM}${cand.id}`,
-    labels: ["1", "2", "3", "4", "5", "6", "7"],
-    required: true
-  }));
-
-  return {
-    type: jsPsychSurveyLikert,
-    preamble: `
-      <div style="text-align:center; max-width:950px; margin:0 auto 20px auto;">
-        <p style="font-size:26px; margin:0 0 10px 0;"><b>${ordinalWord(scenarioNumber)} company scenario</b></p>
-        <h3 style="margin:0 0 12px 0;"><b>${scenario.title}</b></h3>
-        <p style="margin:0 0 18px 0; line-height:1.5; color:rgba(0,0,0,0.85);">
-          ${scenario.text}
-        </p>
-        <p style="margin:0 0 20px 0;">
-          <b>Please rate all three candidates below.</b>
-        </p>
-      </div>
-    `,
-    questions,
-    button_label: 'Continue',
-    on_start: () => {
-      document.body.classList.add('text-batch');
-    },
-    on_finish: (data) => {
-      document.body.classList.remove('text-batch');
-
-      const resp = (data.response && typeof data.response === 'object')
-        ? data.response
-        : (data.responses ? JSON.parse(data.responses) : {});
-
-      const rows = bios.map((cand) => {
-        const key = `${scenario.id}${DELIM}part1${DELIM}${cand.id}`;
-        const raw = resp[key];
-        const rating = (typeof raw === 'number') ? raw + 1 : null;
-
-        return {
-          participant_id: PARTICIPANT_ID,
-          scenario_id: scenario.id,
-          scenario_kind: 'CEO',
-          study_part: 'part1_text_only',
-          phase: 'scenario_plus_all_bios',
-          candidate_id: cand.id,
-          candidate_name: cand.name,
-          rating,
-          modality: 'text_only',
-          rt: data.rt
+    countsRef.transaction(
+      (current) => {
+        const cur = current || {
+          1: 0,
+          2: 0,
+          3: 0,
+          4: 0,
+          5: 0,
+          6: 0
         };
-      });
 
-      data.row_expanded = rows;
-    },
-    data: {
-      trial_type: 'part1_text_ratings',
-      scenario_id: scenario.id,
-      scenario_kind: 'CEO',
-      participant_id: PARTICIPANT_ID,
-      study_part: 'part1_text_only'
-    }
-  };
+        const all = [
+          { g: 1, c: Number(cur[1] || 0) },
+          { g: 2, c: Number(cur[2] || 0) },
+          { g: 3, c: Number(cur[3] || 0) },
+          { g: 4, c: Number(cur[4] || 0) },
+          { g: 5, c: Number(cur[5] || 0) },
+          { g: 6, c: Number(cur[6] || 0) }
+        ];
+
+        const eligible = all.filter(x => x.c < TARGET_PER_CONDITION);
+        const pick = (eligible.length ? eligible : all).sort((a, b) => a.c - b.c)[0].g;
+
+        chosen = pick;
+        cur[pick] = Number(cur[pick] || 0) + 1;
+
+        return cur;
+      },
+      (error, committed) => {
+        if (error) return reject(error);
+        if (!committed) return reject(new Error("Condition transaction not committed."));
+        resolve(chosen);
+      },
+      false
+    );
+  });
 }
 
-/* ---------- PART 2 builder: matches original structure ---------- */
-function buildPart2CandidateTrials(scenario, scenarioNumber) {
-  const setup = SCENARIO_SETUP[scenario.id];
-  const bios = setup.bios;
-  const facePool = setup.facePool;
-  const candToFace = setup.candToFace;
-  const variantMap = setup.variantMap;
+/* ---------- Build candidate trials ---------- */
+function buildCandidateTrials(scenario, scenarioNumber) {
+  let bios = BIOS[scenario.id].map(b => ({ ...b }));
+
+  if (RANDOMIZE_DISPLAY_ORDER) {
+    bios = shuffle(bios);
+  }
+
+  const scenarioPattern = VARIANT_ASSIGNMENT[scenario.id];
+  const variantMap = {
+    C1: scenarioPattern[0],
+    C2: scenarioPattern[1],
+    C3: scenarioPattern[2]
+  };
 
   const trials = bios.map((cand) => {
-    const faceIndex = candToFace[cand.id];
     const useVariant = variantMap[cand.id];
-    const img = facePath(faceIndex, useVariant);
+    const img = facePath(cand.face_index, useVariant);
 
     const prompt = `
       <div class="candidate-block" style="text-align:center; max-width:900px; margin:0 auto;">
@@ -299,7 +315,7 @@ function buildPart2CandidateTrials(scenario, scenarioNumber) {
       preamble: ``,
       questions: [{
         prompt,
-        name: `${scenario.id}${DELIM}part2${DELIM}${cand.id}`,
+        name: `${scenario.id}${DELIM}image${DELIM}${cand.id}`,
         labels: ["1", "2", "3", "4", "5", "6", "7"],
         required: true
       }],
@@ -314,14 +330,14 @@ function buildPart2CandidateTrials(scenario, scenarioNumber) {
         scenario_id: scenario.id,
         scenario_kind: 'CEO',
         participant_id: PARTICIPANT_ID,
+        condition: PARTICIPANT_CONDITION,
         candidate_id: cand.id,
         candidate_name: cand.name,
+        candidate_status: cand.status,
         stimulus_file: img,
         modality: 'image',
-        face_index: faceIndex,
-        variant_used: useVariant,
-        face_set: facePool.join(','),
-        study_part: 'part2_image_bio'
+        face_index: cand.face_index,
+        variant_used: useVariant
       },
 
       on_finish: (data) => {
@@ -339,12 +355,12 @@ function buildPart2CandidateTrials(scenario, scenarioNumber) {
           participant_id: PARTICIPANT_ID,
           scenario_id: scenario.id,
           scenario_kind: 'CEO',
-          study_part: 'part2_image_bio',
           phase: 'bio_plus_face',
+          condition: PARTICIPANT_CONDITION,
           candidate_id: cand.id,
           candidate_name: cand.name,
-          face_index: faceIndex,
-          face_set: facePool.join(','),
+          candidate_status: cand.status,
+          face_index: cand.face_index,
           variant: useVariant,
           rating,
           face_file: img,
@@ -371,7 +387,7 @@ function buildPart2CandidateTrials(scenario, scenarioNumber) {
         data: {
           trial_type: 'candidate_ISI',
           scenario_id: scenario.id,
-          study_part: 'part2_image_bio'
+          condition: PARTICIPANT_CONDITION
         }
       });
     }
@@ -405,7 +421,7 @@ function buildPart2CandidateTrials(scenario, scenarioNumber) {
       scenario_id: scenario.id,
       scenario_kind: 'CEO',
       modality: 'image',
-      study_part: 'part2_image_bio'
+      condition: PARTICIPANT_CONDITION
     }
   };
 
@@ -433,26 +449,58 @@ function buildPart2CandidateTrials(scenario, scenarioNumber) {
       trial_type: 'scenario_announce',
       scenario_id: scenario.id,
       scenario_number: scenarioNumber,
-      study_part: 'part2_image_bio'
+      condition: PARTICIPANT_CONDITION
     }
   };
 
   return [announce, preface, ...interleaved];
 }
 
-/* ---------- Firebase ---------- */
-const firebaseConfig = {
-  apiKey: "AIzaSyDVFN2B7ux0o--VEHY4ojHEdXWb864LBCk",
-  authDomain: "final-study-eb20c.firebaseapp.com",
-  projectId: "final-study-eb20c",
-  storageBucket: "final-study-eb20c.firebasestorage.app",
-  messagingSenderId: "1060756765989",
-  appId: "1:1060756765989:web:09fc13bb4f562abc236ecc",
-  measurementId: "G-8ZSSF48Q1F"
+/* ---------- Setup trial ----------
+   Assigns condition via Firebase counter, saves it, then
+   builds preload list and scenario trials.
+*/
+const setupCounterbalance = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: `<p>Loading…</p>`,
+  choices: "NO_KEYS",
+  trial_duration: 10,
+  on_start: async () => {
+    PARTICIPANT_CONDITION = await assignConditionWithQuota();
+    VARIANT_ASSIGNMENT = CONDITION_PATTERNS[PARTICIPANT_CONDITION];
+
+    await db.ref(`participants/${PARTICIPANT_ID}/meta/condition_assignment`).set({
+      participant_id: PARTICIPANT_ID,
+      condition: PARTICIPANT_CONDITION,
+      timestamp: Date.now()
+    });
+
+    jsPsych.data.addProperties({
+      participant_id: PARTICIPANT_ID,
+      condition: PARTICIPANT_CONDITION
+    });
+
+    preloadImages.length = 0;
+    CEO_SCENARIOS.forEach((scenario) => {
+      const bios = BIOS[scenario.id];
+      bios.forEach((cand) => {
+        preloadImages.push(facePath(cand.face_index, 1));
+        preloadImages.push(facePath(cand.face_index, 3));
+      });
+    });
+
+    scenarioTrials.length = 0;
+    const shuffledScenarios = shuffle(CEO_SCENARIOS);
+    shuffledScenarios.forEach((scn, idx) => {
+      scenarioTrials.push(...buildCandidateTrials(scn, idx + 1));
+    });
+  }
 };
 
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const preloadStimuli = {
+  type: jsPsychPreload,
+  images: preloadImages
+};
 
 /* ---------- jsPsych Init ---------- */
 document.body.style.background = 'white';
@@ -471,12 +519,13 @@ const jsPsych = initJsPsych({
       }
     });
 
-    const participantRef = db.ref('pilot_scenarios_image_ceo_two_part_blocked').child(PARTICIPANT_ID);
+    const participantRef = db.ref('pilot_scenarios_ceo_3scenario_v1v3').child(PARTICIPANT_ID);
 
     function uploadAllRows() {
       if (flat.length === 0) {
         return participantRef.set({
           participant_id: PARTICIPANT_ID,
+          condition: PARTICIPANT_CONDITION,
           completed: true,
           timestamp: new Date().toISOString()
         });
@@ -485,14 +534,14 @@ const jsPsych = initJsPsych({
       const writes = flat.map(r => {
         const payload = {
           participant_id: r.participant_id || PARTICIPANT_ID,
+          condition: r.condition || PARTICIPANT_CONDITION,
           scenario_id: r.scenario_id || '',
           scenario_kind: r.scenario_kind || '',
-          study_part: r.study_part || '',
           phase: r.phase || '',
           candidate_id: r.candidate_id || '',
           candidate_name: r.candidate_name || '',
+          candidate_status: r.candidate_status || '',
           face_index: (typeof r.face_index === 'undefined') ? '' : r.face_index,
-          face_set: r.face_set || '',
           variant: (typeof r.variant === 'undefined') ? '' : r.variant,
           rating: (typeof r.rating === 'undefined') ? null : r.rating,
           face_file: r.face_file || '',
@@ -541,7 +590,7 @@ const jsPsych = initJsPsych({
 /* ---------- Timeline ---------- */
 const timeline = [];
 
-/* ---------- CONSENT PAGE ---------- */
+/* ---------- Consent ---------- */
 timeline.push({
   type: jsPsychHtmlKeyboardResponse,
   choices: "NO_KEYS",
@@ -567,30 +616,27 @@ timeline.push({
         background:white;
       ">
         <p><b>Researchers:</b><br>
+        Eshnaa Aujla, graduate student (eshnaa15@yorku.ca)<br>
         Shreya Sharma, graduate student (ssharm29@york.ca)<br>
         Supervisor: Vinod Goel, vgoel@yorku.ca</p>
 
         <p>We invite you to take part in this research study. Please read this document and discuss any questions or concerns that you may have with the Investigator.</p>
 
-        <p><b>Purpose of the Research:</b> This project investigates the cognitive structures and processes underlying human reasoning & problem-solving abilities. The tasks vary between conditions but all involve attending to linguistic or visual stimuli and making a perceptual or cognitive judgment, usually on a computer screen.</p>
+        <p><b>Purpose of the Research:</b> This project investigates the cognitive structures and processes underlying human reasoning & problem-solving abilities. The tasks vary between conditions but all involve attending to visual stimuli and making judgments on a computer screen.</p>
 
-        <p><b>What You Will Be Asked to Do:</b> You will be asked to complete a self questionnaire. After viewing images, you will be asked to make certain judgements.</p>
+        <p><b>What You Will Be Asked to Do:</b> You will complete a demographic questionnaire and then evaluate candidates for CEO positions.</p>
 
-        <p><b>Risks and Discomforts:</b> We do not foresee any risks or discomfort from your participation in the research. You may, however, experience some frustration or stress if you believe that you are not doing well. Certain participants may have difficulty with some of the tasks. If you do feel discomfort you may withdraw at any time.</p>
+        <p><b>Risks and Discomforts:</b> We do not foresee any risks or discomfort from your participation in the research. If you do feel discomfort you may withdraw at any time.</p>
 
-        <p><b>Benefits:</b> There is no direct benefit to you, but knowledge may be gained that may help others in the future. The study takes approximately 20 minutes to complete, and you will receive $5.00 USD for your participation.</p>
+        <p><b>Benefits:</b> There is no direct benefit to you, but knowledge may be gained that may help others in the future.</p>
 
-        <p><b>Voluntary Participation:</b> Your participation is entirely voluntary and you may choose to stop participating at any time. Your decision will not affect your relationship with the researcher, study staff, or York University.</p>
+        <p><b>Voluntary Participation:</b> Your participation is entirely voluntary and you may choose to stop participating at any time.</p>
 
         <p><b>Withdrawal:</b> You may withdraw at any time. If you withdraw, all associated data will be destroyed immediately.</p>
 
-        <p><b>Secondary Use of Data:</b> De-identified data may be used in later related studies by the research team, but only in anonymous form and only following ethics review.</p>
+        <p><b>Confidentiality:</b> All data will be collected anonymously. Data will be stored in a secure online system accessible only to the research team.</p>
 
-        <p><b>Confidentiality:</b> All data will be collected anonymously. Data will be stored in a secure online system accessible only to the research team. Confidentiality cannot be guaranteed during internet transmission.</p>
-
-        <p>Your data may be deposited in a publicly accessible scientific repository in fully anonymized form. No identifying information will be included.</p>
-
-        <p><b>Questions?</b> For questions about the study, contact Dr. Vinod Goel, Eshnaa Aujla, or Shreya Sharma. For questions about your rights, contact York University's Office of Research Ethics at ore@yorku.ca.</p>
+        <p><b>Questions?</b> For questions about the study, contact Dr. Vinod Goel, Eshnaa Aujla, or Shreya Sharma.</p>
 
         <p><b>Legal Rights and Signatures:</b><br>
         By selecting “I consent to participate,” you indicate that you have read and understood the information above and agree to participate voluntarily.</p>
@@ -631,7 +677,7 @@ timeline.push({
     box.addEventListener("scroll", checkScroll);
 
     yesBtn.onclick = () => {
-      db.ref(`pilot_scenarios_image_ceo_two_part_blocked/${PARTICIPANT_ID}/consent`).set({
+      db.ref(`pilot_scenarios_ceo_3scenario_v1v3/${PARTICIPANT_ID}/consent`).set({
         consent: "yes",
         timestamp: new Date().toISOString()
       });
@@ -639,7 +685,7 @@ timeline.push({
     };
 
     noBtn.onclick = () => {
-      db.ref(`pilot_scenarios_image_ceo_two_part_blocked/${PARTICIPANT_ID}/consent`).set({
+      db.ref(`pilot_scenarios_ceo_3scenario_v1v3/${PARTICIPANT_ID}/consent`).set({
         consent: "no",
         timestamp: new Date().toISOString()
       });
@@ -660,10 +706,9 @@ timeline.push({
   stimulus: `
     <div style="text-align:center; max-width:900px; margin:48px auto;">
       <h2><b>Welcome to the experiment</b></h2>
-      <p>Imagine you are a recruiter at NorthStar Talent Collective. NorthStar helps in the identification and recruitment of employees ranging from CEOs to school teachers. You are in charge of reviewing candidate profiles for several different portfolios.</p>
-      <p>Two companies are looking to hire a new <b>Chief Executive Officer (CEO)</b>.</p>
-      <p>You will be presented with information about each company including the qualifications they are looking for in a new CEO, and the profiles of three candidates applying for each position.</p>
-      <p>Your job is to evaluate each candidate and indicate how likely you would be to recommend them for the position considering the companies’ requirements.</p>
+      <p>Imagine you are a recruiter at NorthStar Talent Collective. You will review candidates for <b>three CEO hiring scenarios</b>.</p>
+      <p>For each scenario, you will be shown three candidates one at a time. Each candidate profile will include an image and a written bio.</p>
+      <p>Your job is to evaluate how likely you would be to recommend each candidate for the position, based on the company’s requirements.</p>
       <p>You will first be presented with some demographic questions.</p>
       <p>Press <b>SPACE</b> to begin the demographic questionnaire.</p>
     </div>
@@ -685,12 +730,12 @@ timeline.push({
       </p>
 
       <p>
-        <label for="demo_gender"><b>2. What is your sex?</b></label><br>
+        <label for="demo_gender"><b>2. What is your gender?</b></label><br>
         <select name="gender" id="demo_gender"
                 style="width:260px; padding:4px; margin-top:4px;">
           <option value="" disabled selected>-- Please select --</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
+          <option value="Man">Man</option>
+          <option value="Woman">Woman</option>
         </select>
       </p>
 
@@ -814,71 +859,23 @@ timeline.push({
   pages: [
     `<div style="text-align:center; max-width:900px; margin:48px auto;">
        <h3><b>Instructions</b></h3>
-       <p>You will complete this study in <b>two parts</b>.</p>
-       <p><b>Part 1:</b> You will first review <b>both CEO scenarios</b>. For each scenario, you will be presented with the scenario and all three candidate biographies on the same page and be required to rate all three candidates.</p>
-       <p><b>Part 2:</b> You will then complete the image section. In this section, each scenario will be shown again and candidates biographies will be presented one at a time with an image of them below it.</p>
-       <p>For all ratings, use the scale from <b>1</b> (not at all likely to recommend) to <b>7</b> (extremely likely to recommend) to indicate how likely you would be to reccomend each candidate for the position.</p>
+       <p>You will now be presented with <b>three different CEO hiring scenarios</b>.</p>
+       <p>For each scenario, you will review <b>three candidates</b> one at a time.</p>
+       <p>Each candidate will be shown with an <b>image</b> and a written bio.</p>
+       <p>Your task is to rate how likely you would be to recommend each candidate for the position.</p>
+       <p>Use the scale from <b>1</b> (not at all likely to recommend) to <b>7</b> (extremely likely to recommend).</p>
        <p>Please press <b>NEXT</b> to proceed.</p>
      </div>`
   ],
   show_clickable_nav: true
 });
 
-/* ---------- Preload male face assets ---------- */
-const preloadImages = [];
-SCENARIO_ORDER.forEach((scn) => {
-  const facePool = SCENARIO_SETUP[scn.id].facePool;
-  for (const i of facePool) {
-    for (let v = 1; v <= 3; v++) {
-      preloadImages.push(facePath(i, v));
-    }
-  }
-});
+/* ---------- Dynamic setup ---------- */
+timeline.push(setupCounterbalance);
+timeline.push(preloadStimuli);
+timeline.push({ timeline: scenarioTrials });
 
-timeline.push({
-  type: jsPsychPreload,
-  images: preloadImages
-});
-
-/* ---------- PART 1 intro ---------- */
-timeline.push({
-  type: jsPsychHtmlKeyboardResponse,
-  stimulus: `
-    <div style="text-align:center; max-width:900px; margin:48px auto;">
-      <h3><b>Part 1</b></h3>
-      <p>In this section, you will review both CEO scenarios in text-only form.</p>
-      <p>For each scenario, you will see the scenario and all three candidate bios on the same page.</p>
-      <p>Press <b>SPACE</b> to begin Part 1.</p>
-    </div>
-  `,
-  choices: [' ']
-});
-
-/* ---------- PART 1: both scenarios first ---------- */
-SCENARIO_ORDER.forEach((scn, idx) => {
-  timeline.push(buildPart1Trial(scn, idx + 1));
-});
-
-/* ---------- PART 2 intro ---------- */
-timeline.push({
-  type: jsPsychHtmlKeyboardResponse,
-  stimulus: `
-    <div style="text-align:center; max-width:900px; margin:48px auto;">
-      <h3><b>Part 2</b></h3>
-      <p>You will now begin the image section.</p>
-      <p>Each scenario will be shown again, and candidates will now be presented one at a time with an image.</p>
-      <p>Press <b>SPACE</b> to begin Part 2.</p>
-    </div>
-  `,
-  choices: [' ']
-});
-
-/* ---------- PART 2: original-style image section ---------- */
-SCENARIO_ORDER.forEach((scn, idx) => {
-  timeline.push(...buildPart2CandidateTrials(scn, idx + 1));
-});
-
-/* ---------- End screen ---------- */
+/* ---------- End ---------- */
 timeline.push({
   type: jsPsychHtmlKeyboardResponse,
   stimulus: `

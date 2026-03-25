@@ -76,17 +76,17 @@ function ordinalWord(n) {
 const CEO_SCENARIOS = [
   {
     id: 'CEO_A',
-    title: 'NovaLink',
+    title: 'NovaLink: Toronto, ON',
     text: `NovaLink is a Canadian tech firm, with a team of 5000 employees, that builds smart software to help companies manage their supply chains. We’ve grown across North America and are now preparing to expand into Europe. At the same time, we’re dealing with a hostile takeover attempt from a U.S. competitor. We want to remain independent and grow internationally, without losing our focus or team stability. We are looking for a new CEO to help navigate these challenges and opportunities.`
   },
   {
     id: 'CEO_B',
-    title: 'GreenPath',
+    title: 'GreenPath: Vancouver, BC',
     text: `GreenPath develops software to help other companies track and reduce their environmental impact in Canada and Europe. We’ve grown quickly to a team of 500, but that growth has created new pressures. We’ve fallen behind in updating our tools and platforms to keep up with new climate regulations, particularly in Europe. Furthermore, our switch back from remote to in-office mode after the COVID lockdowns has left some staff dissatisfied and unheard. We now want to consolidate and focus on doing two things better: staying ahead of environmental standards and making GreenPath a more connected and desirable place to work. We are looking for a new CEO to help us achieve these goals.`
   },
   {
     id: 'CEO_C',
-    title: 'Westline Foods',
+    title: 'Westline Foods: Montreal, QC',
     text: `Westline Foods is a Canadian company that produces packaged meal products for major grocery chains across North America. In recent years, the company has developed a strong reputation for quality and steady growth. More recently, however, two issues have begun to threaten that momentum. Product launches have been moving more slowly than expected, making it harder for the company to respond to changing consumer demand. At the same time, employee turnover across several divisions has made it difficult to maintain continuity within the organization. We are looking for a new CEO who can help the company move more efficiently while also creating a more stable internal environment.`
   }
 ];

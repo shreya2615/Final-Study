@@ -87,7 +87,7 @@ const CEO_SCENARIOS = [
   {
     id: 'CEO_C',
     title: 'Westline Foods: Montreal, QC',
-    text: `Westline Foods is a Canadian company that produces packaged meal products for major grocery chains across North America. In recent years, the company has developed a strong reputation for quality and steady growth. More recently, however, two issues have begun to threaten that momentum. Product launches have been moving more slowly than expected, making it harder for the company to respond to changing consumer demand. At the same time, employee turnover across several divisions has made it difficult to maintain continuity within the organization. We are looking for a new CEO who can help the company move more efficiently while also creating a more stable internal environment.`
+    text: `Westline Foods is a Canadian company that produces packaged meal products for major grocery chains across North America. We have been in business for 75 years and developed a strong reputation for quality and steady growth. We have 5,200 employees. Currently we are challenged by slowing sales momentum and lagging profits. Our production facilities are 20 to 30 years old and very labour intensive. The board would like to move the company into the 21st Century through AI powered automation of plants and trimming of the work force. We are looking for a new CEO who can reinvigorate our sales momentum and profit margins by opening new markets and reigning in production costs through aggressive automation and payroll reduction.`
   }
 ];
 
@@ -151,21 +151,21 @@ const BIOS = {
       name: 'Robert',
       status: 'rational',
       face_index: 7,
-      bio: 'In my previous role as president of a national consumer goods company, I was brought in during a period when new product lines were taking too long to reach market and several departments were struggling to hold onto experienced staff. Over time, I worked with senior teams to tighten coordination across development and operations, while also putting more attention on how managers supported and retained employees. Colleagues often described me as someone who could bring greater rhythm to the organization without losing sight of the people doing the work. I have usually been drawn to companies that need steadier execution and a stronger internal foundation.'
+      bio: 'In my role as VP of a large manufacturing company, I was charged with reversing stagnating sales and declining profits. Under my lead we entered new regional and international markets while updating plants with newer automated systems that reduced labor costs and improved efficiency. This combination was instrumental in strengthening the company’s financial position over time. The role required making difficult decisions while working closely with not only sales and production teams, but also labor unions. Colleagues often described me as someone who could support growth while improving how a company operates.'
     },
     {
       id: 'C2',
       name: 'Mark',
       status: 'second_best',
       face_index: 8,
-      bio: 'As vice president of operations at a large food manufacturing firm, I spent much of my time improving how quickly products moved from planning to launch. My work often involved coordinating across production, supply chain, and commercial teams so that decisions were made more efficiently and fewer delays carried over from one stage to the next. I’ve generally done my best work in environments where companies want to become more responsive and better organized as they grow. People I’ve worked with tend to know me as calm, methodical, and focused on keeping large initiatives moving forward.'
+      bio: 'As VP of marketing of a national manufacturing firm, I worked closely with senior leadership during a period when sales growth had begun to stagnate across several core business sectors. Over time, we looked for opportunities beyond our usual customer base, entering new regions and building relationships in markets the company had not worked in before. Much of my career has involved helping established companies adjust when familiar sources of growth begin to level off. I tend to do my best work in organizations that need clearer direction and a stronger position in changing markets.'
     },
     {
       id: 'C3',
       name: 'Jason',
       status: 'worst',
       face_index: 9,
-      bio: 'I have held senior leadership roles in corporate finance and strategic planning for several established Canadian firms. In one position, I helped oversee a multi-year budgeting process that improved cost visibility across business units. In another, I worked with executive leadership to refine long-term forecasting and investor reporting practices. I see myself as a disciplined and analytical leader who values structure, accountability, and sound decision-making. My career has largely centered on helping companies better understand their financial position and plan for sustainable long-term performance.'
+      bio: 'I have held senior leadership roles in finance and corporate planning across several well-established Canadian firms. In one position, I worked closely with executive leadership on long-range budgeting and capital allocation. In another, I helped strengthen reporting practices and improve visibility into business performance across divisions. I see myself as a disciplined and analytical leader who values structure, accountability, and clear decision-making. My experience has taught me that companies perform best when leadership remains focused on financial stability, internal alignment, and measured long-term planning.'
     }
   ]
 };
@@ -591,7 +591,6 @@ function buildTimeline(preloadImages, scenarioTrials) {
           background:white;
         ">
           <p><b>Researchers:</b><br>
-          Eshnaa Aujla, graduate student (eshnaa15@yorku.ca)<br>
           Shreya Sharma, graduate student (ssharm29@york.ca)<br>
           Supervisor: Vinod Goel, vgoel@yorku.ca</p>
 
@@ -684,8 +683,8 @@ function buildTimeline(preloadImages, scenarioTrials) {
       <div style="text-align:center; max-width:900px; margin:48px auto;">
         <h2><b>Welcome to the experiment</b></h2>
         <p>Imagine you are a recruiter at NorthStar Talent Collective. You will review candidates for <b>three CEO hiring scenarios</b>.</p>
-        <p>For each scenario, you will be shown three candidates one at a time. Each candidate profile will include an image and a written bio.</p>
-        <p>Your job is to evaluate how likely you would be to recommend each candidate for the position, based on the company’s requirements.</p>
+        <p>For each scenario, you will be shown three candidates one at a time. Each candidate profile will include their written biography as well as an image of them.</p>
+        <p>Your job is to evaluate how likely you would be to recommend each candidate for the position.</p>
         <p>You will first be presented with some demographic questions.</p>
         <p>Press <b>SPACE</b> to begin the demographic questionnaire.</p>
       </div>
@@ -840,7 +839,7 @@ function buildTimeline(preloadImages, scenarioTrials) {
          <h3><b>Instructions</b></h3>
          <p>You will now be presented with <b>three different CEO hiring scenarios</b>.</p>
          <p>For each scenario, you will review <b>three candidates</b> one at a time.</p>
-         <p>Each candidate will be shown with an <b>image</b> and a written bio.</p>
+         <p>Each candidate will be shown with an <b>image of them</b> and a <b>written bio</b>.</p>
          <p>Your task is to rate how likely you would be to recommend each candidate for the position.</p>
          <p>Use the scale from <b>1</b> (not at all likely to recommend) to <b>7</b> (extremely likely to recommend).</p>
          <p>Please press <b>NEXT</b> to proceed.</p>

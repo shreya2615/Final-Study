@@ -684,7 +684,7 @@ function buildTimeline(preloadImages, scenarioTrials) {
         <h2><b>Welcome to the experiment</b></h2>
         <p>Imagine you are a recruiter at NorthStar Talent Collective. NorthStar helps in the identification and recruitment of employees ranging from CEOs to school teachers. You are in charge of reviewing candidate profiles for several different portfolios.</p>
         <p>Three companies are looking to hire a new <b>Chief Executive Officer (CEO)</b><p>
-        <p>FYou will be presented with information about each company including the qualifications they are looking for in a new employee, and the profiles of three candidates applying for each position.</p>
+        <p>You will be presented with information about each company, including the qualifications they are looking for in a new employee, and the profiles of three candidates applying for each position.</p>
         <p>Your job is to evaluate each candidate and indicate how likely you would be to recommend them for the position considering the companies’ requirements.</p>
         <p>You will first be presented with some demographic questions.</p>
         <p>Press <b>SPACE</b> to begin the demographic questionnaire.</p>

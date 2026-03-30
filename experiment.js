@@ -682,9 +682,10 @@ function buildTimeline(preloadImages, scenarioTrials) {
     stimulus: `
       <div style="text-align:center; max-width:900px; margin:48px auto;">
         <h2><b>Welcome to the experiment</b></h2>
-        <p>Imagine you are a recruiter at NorthStar Talent Collective. You will review candidates for <b>three CEO hiring scenarios</b>.</p>
-        <p>For each scenario, you will be shown three candidates one at a time. Each candidate profile will include their written biography as well as an image of them.</p>
-        <p>Your job is to evaluate how likely you would be to recommend each candidate for the position.</p>
+        <p>Imagine you are a recruiter at NorthStar Talent Collective. NorthStar helps in the identification and recruitment of employees ranging from CEOs to school teachers. You are in charge of reviewing candidate profiles for several different portfolios.</p>
+        <p>Three companies are looking to hire a new <b>Chief Executive Officer (CEO)</b><p>
+        <p>FYou will be presented with information about each company including the qualifications they are looking for in a new employee, and the profiles of three candidates applying for each position.</p>
+        <p>Your job is to evaluate each candidate and indicate how likely you would be to recommend them for the position considering the companies’ requirements.</p>
         <p>You will first be presented with some demographic questions.</p>
         <p>Press <b>SPACE</b> to begin the demographic questionnaire.</p>
       </div>
@@ -837,11 +838,11 @@ function buildTimeline(preloadImages, scenarioTrials) {
     pages: [
       `<div style="text-align:center; max-width:900px; margin:48px auto;">
          <h3><b>Instructions</b></h3>
-         <p>You will now be presented with <b>three different CEO hiring scenarios</b>.</p>
-         <p>For each scenario, you will review <b>three candidates</b> one at a time.</p>
-         <p>Each candidate will be shown with an <b>image of them</b> and a <b>written bio</b>.</p>
-         <p>Your task is to rate how likely you would be to recommend each candidate for the position.</p>
-         <p>Use the scale from <b>1</b> (not at all likely to recommend) to <b>7</b> (extremely likely to recommend).</p>
+         <p>You will now be presented with <b>three different scenarios</b> of companies looking to hire a new CEO, with certain qualifications.</p>
+         <p>Alongside each hiring scenario, three job applicants will be presented. Each applicants profile will be paired with an <b>image</b> of the applicant.</p>
+         <p>Please pay close attention to the information provided for each candidate as you will need it to make your evaluations.</p>
+         <p>For each scenario, rate <b>all three candidates</b> on a scale of 1 to 7, with <b>1</b> being <b>not at all likely to recommend</b> and <b>7</b> being <b>very likely to recommend</b>.</p>
+         <p>The experiment may take a few minutes to load, please make sure you have a stable internet connection.</p>
          <p>Please press <b>NEXT</b> to proceed.</p>
        </div>`
     ],

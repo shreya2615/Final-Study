@@ -838,10 +838,9 @@ function buildTimeline(preloadImages, scenarioTrials) {
     pages: [
       `<div style="text-align:center; max-width:900px; margin:48px auto;">
          <h3><b>Instructions</b></h3>
-         <p>You will now be presented with <b>three different scenarios</b> of companies looking to hire a new CEO, with certain qualifications.</p>
-         <p>Alongside each hiring scenario, three job applicants will be presented. Each applicants profile will be paired with an <b>image</b> of the applicant.</p>
-         <p>Please pay close attention to the information provided for each candidate as you will need it to make your evaluations.</p>
-         <p>For each scenario, rate <b>all three candidates</b> on a scale of 1 to 7, with <b>1</b> being <b>not at all likely to recommend</b> and <b>7</b> being <b>very likely to recommend</b>.</p>
+         <p>You will now be presented with <b>three different scenarios</b> of companies looking to hire a new CEO.</p>
+         <p>For each company scenario, three job applicants will be presented. Each applicants profile includes a brief bio and photograph of the applicant.</p>
+         <p>Your task is to rate how likely you are to shortlist that candidate for an interview. Rate each candidate on a scale of 1 to 7, with <b>1</b> being <b>not at all likely to recommend</b> and <b>7</b> being <b>very likely to recommend</b>.</p>
          <p>The experiment may take a few minutes to load, please make sure you have a stable internet connection.</p>
          <p>Please press <b>NEXT</b> to proceed.</p>
        </div>`

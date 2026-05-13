@@ -1,18 +1,21 @@
 /****************************************************
- * Pilot Scenarios Study - CEO IMAGE ONLY
+ * Pilot Scenarios Study - CEO BIO + IMAGE
  *
  * DESIGN:
- * - Only image-based candidate pages
  * - 3 CEO scenarios
  * - 3 candidates per scenario
- * - 9 total male faces, 1 face identity per candidate
+ * - 9 total male face identities
  * - Only variants 1 and 3 used
- * - Participants assigned to 1 of 6 fixed conditions
+ * - Participants assigned to 1 of 18 balanced image conditions
+ * - Each participant sees each face identity exactly once
+ * - Across conditions, each face rotates through every candidate slot
+ * - Across conditions, each face appears equally often in variant 1 and variant 3
  * - Firebase transaction keeps condition counts as even as possible
  * - Scenario order randomized
  * - Candidate order within scenario randomized
  *
- * VARIANT COUNTERBALANCING:
+ * COUNTERBALANCING:
+ * - 9 face-rotation conditions x 2 variant-flip conditions = 18 conditions
  * - C1 = rational choice
  * - C2 = second-best choice
  * - C3 = worst choice
@@ -27,7 +30,10 @@ const PARTICIPANT_ID = urlParams.get('PID') || `P${Math.floor(Math.random() * 1e
 /* ---------- Config ---------- */
 const RANDOMIZE_DISPLAY_ORDER = true;
 const DELIM = "::";
-const TARGET_PER_CONDITION = 30; // change this to your desired target per condition
+const TARGET_PER_CONDITION = 6; // For 100 participants: 10 conditions will receive 6 participants and 8 conditions will receive 5
+const TOTAL_IMAGE_CONDITIONS = 18;
+const DATA_ROOT = 'pilot_scenarios_ceo_3scenario_v1v3_18condition_100p';
+const COUNTS_ROOT = 'meta/image_condition_counts_ceo_18_v1v3_100p';
 
 /* ---------- Paths ---------- */
 function facePath(faceIndex, variant) {
@@ -49,7 +55,7 @@ function ordinalWord(n) {
   return (['First', 'Second', 'Third', 'Fourth'][n - 1]) || `${n}th`;
 }
 
-/* ---------- COMPACT CSS ---------- */
+/* ---------- Compact CSS ---------- */
 (function injectCompactCssOnce() {
   if (document.getElementById('compact-trial-css')) return;
 
@@ -72,7 +78,7 @@ function ordinalWord(n) {
   document.head.appendChild(el);
 })();
 
-/* ---------- Content ---------- */
+/* ---------- CEO Scenarios ---------- */
 const CEO_SCENARIOS = [
   {
     id: 'CEO_A',
@@ -91,10 +97,15 @@ const CEO_SCENARIOS = [
   }
 ];
 
-/*
-  C1 = rational choice
-  C2 = second-best choice
-  C3 = worst choice
+/* ---------- Candidate Bios ----------
+   C1 = rational choice
+   C2 = second-best choice
+   C3 = worst choice
+
+   NOTE:
+   The face_index values below are no longer used to assign fixed faces.
+   They are left only as labels from the older version.
+   The actual face assignment now comes from IMAGE_ASSIGNMENT.
 */
 const BIOS = {
   CEO_A: [
@@ -170,41 +181,68 @@ const BIOS = {
   ]
 };
 
-/* ---------- Counterbalancing conditions ----------
-   Each triple is [C1, C2, C3] variants for that scenario.
+/* ---------- Balanced Image Counterbalancing ----------
+   There are 9 candidate slots:
+   CEO_A C1, CEO_A C2, CEO_A C3,
+   CEO_B C1, CEO_B C2, CEO_B C3,
+   CEO_C C1, CEO_C C2, CEO_C C3.
+
+   Each participant sees all 9 faces exactly once.
+   Across the 18-condition cycle, each face appears with every candidate slot.
+   The A/B variant flip ensures each face x candidate slot appears once as v1 and once as v3.
 */
-const CONDITION_PATTERNS = {
-  1: {
-    CEO_A: [1, 1, 3],
-    CEO_B: [3, 3, 1],
-    CEO_C: [1, 3, 1]
-  },
-  2: {
-    CEO_A: [1, 3, 1],
-    CEO_B: [3, 1, 3],
-    CEO_C: [3, 1, 1]
-  },
-  3: {
-    CEO_A: [3, 1, 1],
-    CEO_B: [1, 3, 3],
-    CEO_C: [1, 1, 3]
-  },
-  4: {
-    CEO_A: [3, 3, 1],
-    CEO_B: [1, 1, 3],
-    CEO_C: [3, 1, 3]
-  },
-  5: {
-    CEO_A: [3, 1, 3],
-    CEO_B: [1, 3, 1],
-    CEO_C: [1, 3, 3]
-  },
-  6: {
-    CEO_A: [1, 3, 3],
-    CEO_B: [3, 1, 1],
-    CEO_C: [3, 3, 1]
+const FACE_INDICES = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+const VARIANT_PATTERN_A = [1, 3, 1, 3, 1, 3, 1, 3, 1];
+const VARIANT_PATTERN_B = [3, 1, 3, 1, 3, 1, 3, 1, 3];
+
+const CANDIDATE_SLOTS = [
+  { scenario_id: 'CEO_A', candidate_id: 'C1' },
+  { scenario_id: 'CEO_A', candidate_id: 'C2' },
+  { scenario_id: 'CEO_A', candidate_id: 'C3' },
+
+  { scenario_id: 'CEO_B', candidate_id: 'C1' },
+  { scenario_id: 'CEO_B', candidate_id: 'C2' },
+  { scenario_id: 'CEO_B', candidate_id: 'C3' },
+
+  { scenario_id: 'CEO_C', candidate_id: 'C1' },
+  { scenario_id: 'CEO_C', candidate_id: 'C2' },
+  { scenario_id: 'CEO_C', candidate_id: 'C3' }
+];
+
+function slotKey(scenarioId, candidateId) {
+  return `${scenarioId}_${candidateId}`;
+}
+
+function buildBalancedImageConditions() {
+  const conditions = {};
+  let conditionNumber = 1;
+
+  for (let rotation = 0; rotation < FACE_INDICES.length; rotation++) {
+    [VARIANT_PATTERN_A, VARIANT_PATTERN_B].forEach((variantPattern, flipIndex) => {
+      const assignment = {};
+
+      CANDIDATE_SLOTS.forEach((slot, slotIndex) => {
+        const rotatedFaceIndex = FACE_INDICES[(slotIndex + rotation) % FACE_INDICES.length];
+        const variant = variantPattern[slotIndex];
+
+        assignment[slotKey(slot.scenario_id, slot.candidate_id)] = {
+          face_index: rotatedFaceIndex,
+          variant,
+          face_rotation: rotation + 1,
+          variant_flip: flipIndex === 0 ? 'A' : 'B'
+        };
+      });
+
+      conditions[conditionNumber] = assignment;
+      conditionNumber++;
+    });
   }
-};
+
+  return conditions;
+}
+
+const IMAGE_CONDITIONS = buildBalancedImageConditions();
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -220,36 +258,29 @@ const firebaseConfig = {
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* ---------- Counterbalance state ---------- */
+/* ---------- Counterbalance State ---------- */
 let PARTICIPANT_CONDITION = null;
-let VARIANT_ASSIGNMENT = null;
+let IMAGE_ASSIGNMENT = null;
 
-/* ---------- Firebase condition balancing ---------- */
+/* ---------- Firebase Condition Balancing ---------- */
 function assignConditionWithQuota() {
-  const countsRef = db.ref("meta/condition_counts_ceo_v1v3");
+  const countsRef = db.ref(COUNTS_ROOT);
 
   return new Promise((resolve, reject) => {
     let chosen = 1;
 
     countsRef.transaction(
       (current) => {
-        const cur = current || {
-          1: 0,
-          2: 0,
-          3: 0,
-          4: 0,
-          5: 0,
-          6: 0
-        };
+        const cur = current || {};
 
-        const all = [
-          { g: 1, c: Number(cur[1] || 0) },
-          { g: 2, c: Number(cur[2] || 0) },
-          { g: 3, c: Number(cur[3] || 0) },
-          { g: 4, c: Number(cur[4] || 0) },
-          { g: 5, c: Number(cur[5] || 0) },
-          { g: 6, c: Number(cur[6] || 0) }
-        ];
+        for (let i = 1; i <= TOTAL_IMAGE_CONDITIONS; i++) {
+          if (typeof cur[i] === "undefined") cur[i] = 0;
+        }
+
+        const all = [];
+        for (let i = 1; i <= TOTAL_IMAGE_CONDITIONS; i++) {
+          all.push({ g: i, c: Number(cur[i] || 0) });
+        }
 
         const eligible = all.filter(x => x.c < TARGET_PER_CONDITION);
         const pick = (eligible.length ? eligible : all).sort((a, b) => a.c - b.c)[0].g;
@@ -269,20 +300,19 @@ function assignConditionWithQuota() {
   });
 }
 
-/* ---------- Build preload images ---------- */
+/* ---------- Build Preload Images ---------- */
 function buildPreloadImages() {
   const images = [];
-  CEO_SCENARIOS.forEach((scenario) => {
-    const bios = BIOS[scenario.id];
-    bios.forEach((cand) => {
-      images.push(facePath(cand.face_index, 1));
-      images.push(facePath(cand.face_index, 3));
-    });
+
+  FACE_INDICES.forEach((faceIndex) => {
+    images.push(facePath(faceIndex, 1));
+    images.push(facePath(faceIndex, 3));
   });
+
   return images;
 }
 
-/* ---------- Build candidate trials ---------- */
+/* ---------- Build Candidate Trials ---------- */
 function buildCandidateTrials(scenario, scenarioNumber) {
   let bios = BIOS[scenario.id].map(b => ({ ...b }));
 
@@ -290,16 +320,16 @@ function buildCandidateTrials(scenario, scenarioNumber) {
     bios = shuffle(bios);
   }
 
-  const scenarioPattern = VARIANT_ASSIGNMENT[scenario.id];
-  const variantMap = {
-    C1: scenarioPattern[0],
-    C2: scenarioPattern[1],
-    C3: scenarioPattern[2]
-  };
-
   const trials = bios.map((cand) => {
-    const useVariant = variantMap[cand.id];
-    const img = facePath(cand.face_index, useVariant);
+    const candidateSlot = slotKey(scenario.id, cand.id);
+    const assignment = IMAGE_ASSIGNMENT[candidateSlot];
+
+    const useFaceIndex = assignment.face_index;
+    const useVariant = assignment.variant;
+    const faceRotation = assignment.face_rotation;
+    const variantFlip = assignment.variant_flip;
+
+    const img = facePath(useFaceIndex, useVariant);
 
     const prompt = `
       <div class="candidate-block" style="text-align:center; max-width:900px; margin:0 auto;">
@@ -342,13 +372,17 @@ function buildCandidateTrials(scenario, scenarioNumber) {
         scenario_kind: 'CEO',
         participant_id: PARTICIPANT_ID,
         condition: PARTICIPANT_CONDITION,
+        image_condition: PARTICIPANT_CONDITION,
+        candidate_slot: candidateSlot,
         candidate_id: cand.id,
         candidate_name: cand.name,
         candidate_status: cand.status,
         stimulus_file: img,
         modality: 'image',
-        face_index: cand.face_index,
-        variant_used: useVariant
+        face_index: useFaceIndex,
+        variant_used: useVariant,
+        face_rotation: faceRotation,
+        variant_flip: variantFlip
       },
 
       on_finish: (data) => {
@@ -368,11 +402,15 @@ function buildCandidateTrials(scenario, scenarioNumber) {
           scenario_kind: 'CEO',
           phase: 'bio_plus_face',
           condition: PARTICIPANT_CONDITION,
+          image_condition: PARTICIPANT_CONDITION,
+          candidate_slot: candidateSlot,
           candidate_id: cand.id,
           candidate_name: cand.name,
           candidate_status: cand.status,
-          face_index: cand.face_index,
+          face_index: useFaceIndex,
           variant: useVariant,
+          face_rotation: faceRotation,
+          variant_flip: variantFlip,
           rating,
           face_file: img,
           modality: 'image',
@@ -383,8 +421,10 @@ function buildCandidateTrials(scenario, scenarioNumber) {
   });
 
   const interleaved = [];
+
   trials.forEach((t, i) => {
     interleaved.push(t);
+
     if (i < trials.length - 1) {
       interleaved.push({
         type: jsPsychHtmlKeyboardResponse,
@@ -398,7 +438,8 @@ function buildCandidateTrials(scenario, scenarioNumber) {
         data: {
           trial_type: 'candidate_ISI',
           scenario_id: scenario.id,
-          condition: PARTICIPANT_CONDITION
+          condition: PARTICIPANT_CONDITION,
+          image_condition: PARTICIPANT_CONDITION
         }
       });
     }
@@ -432,7 +473,8 @@ function buildCandidateTrials(scenario, scenarioNumber) {
       scenario_id: scenario.id,
       scenario_kind: 'CEO',
       modality: 'image',
-      condition: PARTICIPANT_CONDITION
+      condition: PARTICIPANT_CONDITION,
+      image_condition: PARTICIPANT_CONDITION
     }
   };
 
@@ -460,20 +502,23 @@ function buildCandidateTrials(scenario, scenarioNumber) {
       trial_type: 'scenario_announce',
       scenario_id: scenario.id,
       scenario_number: scenarioNumber,
-      condition: PARTICIPANT_CONDITION
+      condition: PARTICIPANT_CONDITION,
+      image_condition: PARTICIPANT_CONDITION
     }
   };
 
   return [announce, preface, ...interleaved];
 }
 
-/* ---------- Build all scenario trials ---------- */
+/* ---------- Build All Scenario Trials ---------- */
 function buildAllScenarioTrials() {
   const scenarioOrder = shuffle(CEO_SCENARIOS);
   const allTrials = [];
+
   scenarioOrder.forEach((scn, idx) => {
     allTrials.push(...buildCandidateTrials(scn, idx + 1));
   });
+
   return allTrials;
 }
 
@@ -485,6 +530,7 @@ document.body.style.fontFamily = 'Arial, sans-serif';
 const jsPsych = initJsPsych({
   display_element: 'jspsych-target',
   override_safe_mode: true,
+
   on_finish: () => {
     const flat = [];
 
@@ -494,13 +540,14 @@ const jsPsych = initJsPsych({
       }
     });
 
-    const participantRef = db.ref('pilot_scenarios_ceo_3scenario_v1v3').child(PARTICIPANT_ID);
+    const participantRef = db.ref(DATA_ROOT).child(PARTICIPANT_ID);
 
     function uploadAllRows() {
       if (flat.length === 0) {
         return participantRef.set({
           participant_id: PARTICIPANT_ID,
           condition: PARTICIPANT_CONDITION,
+          image_condition: PARTICIPANT_CONDITION,
           completed: true,
           timestamp: new Date().toISOString()
         });
@@ -510,14 +557,18 @@ const jsPsych = initJsPsych({
         const payload = {
           participant_id: r.participant_id || PARTICIPANT_ID,
           condition: r.condition || PARTICIPANT_CONDITION,
+          image_condition: r.image_condition || PARTICIPANT_CONDITION,
           scenario_id: r.scenario_id || '',
           scenario_kind: r.scenario_kind || '',
           phase: r.phase || '',
+          candidate_slot: r.candidate_slot || '',
           candidate_id: r.candidate_id || '',
           candidate_name: r.candidate_name || '',
           candidate_status: r.candidate_status || '',
           face_index: (typeof r.face_index === 'undefined') ? '' : r.face_index,
           variant: (typeof r.variant === 'undefined') ? '' : r.variant,
+          face_rotation: (typeof r.face_rotation === 'undefined') ? '' : r.face_rotation,
+          variant_flip: r.variant_flip || '',
           rating: (typeof r.rating === 'undefined') ? null : r.rating,
           face_file: r.face_file || '',
           modality: r.modality || '',
@@ -562,7 +613,7 @@ const jsPsych = initJsPsych({
   }
 });
 
-/* ---------- Timeline builder ---------- */
+/* ---------- Timeline Builder ---------- */
 function buildTimeline(preloadImages, scenarioTrials) {
   const timeline = [];
 
@@ -631,6 +682,7 @@ function buildTimeline(preloadImages, scenarioTrials) {
         </div>
       </div>
     `,
+
     on_load: () => {
       const yesBtn = document.getElementById("consent_yes");
       const noBtn = document.getElementById("consent_no");
@@ -639,6 +691,7 @@ function buildTimeline(preloadImages, scenarioTrials) {
 
       function checkScroll() {
         const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 5;
+
         if (atBottom) {
           yesBtn.disabled = false;
           noBtn.disabled = false;
@@ -651,18 +704,21 @@ function buildTimeline(preloadImages, scenarioTrials) {
       box.addEventListener("scroll", checkScroll);
 
       yesBtn.onclick = () => {
-        db.ref(`pilot_scenarios_ceo_3scenario_v1v3/${PARTICIPANT_ID}/consent`).set({
+        db.ref(`${DATA_ROOT}/${PARTICIPANT_ID}/consent`).set({
           consent: "yes",
           condition: PARTICIPANT_CONDITION,
+          image_condition: PARTICIPANT_CONDITION,
           timestamp: new Date().toISOString()
         });
+
         jsPsych.finishTrial({ consent: "yes" });
       };
 
       noBtn.onclick = () => {
-        db.ref(`pilot_scenarios_ceo_3scenario_v1v3/${PARTICIPANT_ID}/consent`).set({
+        db.ref(`${DATA_ROOT}/${PARTICIPANT_ID}/consent`).set({
           consent: "no",
           condition: PARTICIPANT_CONDITION,
+          image_condition: PARTICIPANT_CONDITION,
           timestamp: new Date().toISOString()
         });
 
@@ -683,7 +739,7 @@ function buildTimeline(preloadImages, scenarioTrials) {
       <div style="text-align:center; max-width:900px; margin:48px auto;">
         <h2><b>Welcome to the experiment</b></h2>
         <p>Imagine you are a recruiter at NorthStar Talent Collective. NorthStar helps in the identification and recruitment of employees ranging from CEOs to school teachers. You are in charge of reviewing candidate profiles for several different portfolios.</p>
-        <p>Three companies are looking to hire a new <b>Chief Executive Officer (CEO)</b><p>
+        <p>Three companies are looking to hire a new <b>Chief Executive Officer (CEO)</b></p>
         <p>You will be presented with information about each company, including the qualifications they are looking for in a new employee, and the profiles of three candidates applying for each position.</p>
         <p>Your job is to evaluate each candidate and indicate how likely you would be to recommend them for the position considering the companies’ requirements.</p>
         <p>You will first be presented with some demographic questions.</p>
@@ -787,6 +843,7 @@ function buildTimeline(preloadImages, scenarioTrials) {
       </div>
     `,
     choices: "NO_KEYS",
+
     on_load: () => {
       const btn = document.getElementById('demo_continue');
       if (!btn) return;
@@ -807,6 +864,7 @@ function buildTimeline(preloadImages, scenarioTrials) {
         const demoRow = {
           participant_id: PARTICIPANT_ID,
           condition: PARTICIPANT_CONDITION,
+          image_condition: PARTICIPANT_CONDITION,
           phase: 'demographics',
           age,
           gender,
@@ -820,6 +878,7 @@ function buildTimeline(preloadImages, scenarioTrials) {
           trial_type: 'demographics',
           participant_id: PARTICIPANT_ID,
           condition: PARTICIPANT_CONDITION,
+          image_condition: PARTICIPANT_CONDITION,
           age,
           gender,
           ethnicity,
@@ -839,9 +898,9 @@ function buildTimeline(preloadImages, scenarioTrials) {
       `<div style="text-align:center; max-width:900px; margin:48px auto;">
          <h3><b>Instructions</b></h3>
          <p>You will now be presented with <b>three different scenarios</b> of companies looking to hire a new CEO.</p>
-         <p>For each company scenario, three job applicants will be presented. Each applicants profile includes a brief bio and photograph of the applicant.</p>
+         <p>For each company scenario, three job applicants will be presented. Each applicant's profile includes a brief bio and photograph of the applicant.</p>
          <p>Your task is to rate how likely you are to shortlist that candidate for an interview. Rate each candidate on a scale of 1 to 7, with <b>1</b> being <b>not at all likely to recommend</b> and <b>7</b> being <b>very likely to recommend</b>.</p>
-         <p>The experiment may take a few minutes to load, please make sure you have a stable internet connection.</p>
+         <p>The experiment may take a few minutes to load. Please make sure you have a stable internet connection.</p>
          <p>Please press <b>NEXT</b> to proceed.</p>
        </div>`
     ],
@@ -854,7 +913,7 @@ function buildTimeline(preloadImages, scenarioTrials) {
     images: preloadImages
   });
 
-  /* ---------- Scenario trials ---------- */
+  /* ---------- Scenario Trials ---------- */
   timeline.push(...scenarioTrials);
 
   /* ---------- End ---------- */
@@ -872,21 +931,27 @@ function buildTimeline(preloadImages, scenarioTrials) {
   return timeline;
 }
 
-/* ---------- Start experiment only after condition is assigned ---------- */
+/* ---------- Start Experiment ---------- */
 (async function startExperiment() {
   try {
     PARTICIPANT_CONDITION = await assignConditionWithQuota();
-    VARIANT_ASSIGNMENT = CONDITION_PATTERNS[PARTICIPANT_CONDITION];
+    IMAGE_ASSIGNMENT = IMAGE_CONDITIONS[PARTICIPANT_CONDITION];
 
     await db.ref(`participants/${PARTICIPANT_ID}/meta/condition_assignment`).set({
       participant_id: PARTICIPANT_ID,
       condition: PARTICIPANT_CONDITION,
+      image_condition: PARTICIPANT_CONDITION,
+      image_assignment: IMAGE_ASSIGNMENT,
+      target_per_condition: TARGET_PER_CONDITION,
+      total_image_conditions: TOTAL_IMAGE_CONDITIONS,
+      data_root: DATA_ROOT,
       timestamp: Date.now()
     });
 
     jsPsych.data.addProperties({
       participant_id: PARTICIPANT_ID,
-      condition: PARTICIPANT_CONDITION
+      condition: PARTICIPANT_CONDITION,
+      image_condition: PARTICIPANT_CONDITION
     });
 
     const preloadImages = buildPreloadImages();
@@ -896,6 +961,7 @@ function buildTimeline(preloadImages, scenarioTrials) {
     jsPsych.run(timeline);
   } catch (err) {
     console.error("Startup failed:", err);
+
     document.body.innerHTML = `
       <div style="text-align:center; max-width:900px; margin:48px auto;">
         <h2>The experiment could not start.</h2>

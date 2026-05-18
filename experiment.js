@@ -30,7 +30,7 @@ const PARTICIPANT_ID = urlParams.get('PID') || `P${Math.floor(Math.random() * 1e
 /* ---------- Config ---------- */
 const RANDOMIZE_DISPLAY_ORDER = true;
 const DELIM = "::";
-const TARGET_PER_CONDITION = 6; // For 100 participants: 10 conditions will receive 6 participants and 8 conditions will receive 5
+const TARGET_PER_CONDITION = 9; // For 100 participants: 10 conditions will receive 6 participants and 8 conditions will receive 5
 const TOTAL_IMAGE_CONDITIONS = 18;
 const DATA_ROOT = 'pilot_scenarios_ceo_3scenario_v1v3_18condition_100p';
 const COUNTS_ROOT = 'meta/image_condition_counts_ceo_18_v1v3_100p';
